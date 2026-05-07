@@ -324,6 +324,9 @@ function RegisterModal({ game, onRegister, onClose, user }) {
   const isFull = game.players.length >= game.maxPlayers;
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "";
   const avatarUrl = user?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null;
+  console.log("RegisterModal user:", JSON.stringify(user?.user_metadata));
+  console.log("RegisterModal avatarUrl:", avatarUrl);
+  console.log("sessionStorage line_avatar_url:", sessionStorage.getItem("line_avatar_url"));
   const [duprRating, setDuprRating] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
