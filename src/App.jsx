@@ -384,7 +384,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>{game.price > 0 ? "💵" : "🆓"}</span>
-                <span>{game.price > 0 ? `$${Number(game.price).toFixed(2)} per player` : "Free"}</span>
+                <span>{game.price > 0 ? `NT$${Number(game.price).toFixed(0)} per player` : "Free"}</span>
               </div>
             </div>
 
@@ -486,7 +486,7 @@ function GameCard({ game, onClick }) {
           <span>⏰ {displayTime(game.time)}{game.endTime ? ` – ${displayTime(game.endTime)}` : ""}</span>
           <span>🏟 {game.courts} court{game.courts !== 1 ? "s" : ""}</span>
           {game.price > 0
-            ? <span className="text-emerald-600 font-semibold">💵 ${Number(game.price).toFixed(2)}/player</span>
+            ? <span className="text-emerald-600 font-semibold">💵 NT${Number(game.price).toFixed(0)}/player</span>
             : <span className="text-emerald-500 font-semibold">🆓 Free</span>
           }
         </div>
@@ -548,17 +548,15 @@ function GameFormModal({ game, onClose, onSave }) {
             <input type="date" value={form.date} onChange={(e) => update("date", e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
           </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Start Time (24hr)</label>
-              <input type="time" value={form.time} onChange={(e) => update("time", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-            </div>
-            <div className="flex-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">End Time <span className="normal-case font-normal text-gray-300">(optional)</span></label>
-              <input type="time" value={form.endTime} onChange={(e) => update("endTime", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-            </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Start Time (24hr, e.g. 18:30)</label>
+            <input type="text" placeholder="e.g. 09:00" value={form.time} onChange={(e) => update("time", e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">End Time <span className="normal-case font-normal text-gray-300">(optional, e.g. 11:00)</span></label>
+            <input type="text" placeholder="e.g. 11:00" value={form.endTime} onChange={(e) => update("endTime", e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Location Name</label>
@@ -583,19 +581,19 @@ function GameFormModal({ game, onClose, onSave }) {
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
             </div>
             <div className="flex-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Courts</label>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Number of Courts</label>
               <input type="number" min={1} max={20} value={form.courts}
                 onChange={(e) => update("courts", e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
             </div>
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Price / Player ($)</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Price / Player (NTD)</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-              <input type="number" min={0} step={0.5} placeholder="0.00" value={form.price}
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">NT$</span>
+              <input type="number" min={0} step={10} placeholder="0" value={form.price}
                 onChange={(e) => update("price", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl pl-6 pr-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+                className="w-full border border-gray-200 rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
             </div>
           </div>
         </div>
