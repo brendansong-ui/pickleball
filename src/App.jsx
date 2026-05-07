@@ -278,7 +278,7 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove }) {
       alert("You cannot cancel within 24 hours of the game start time.");
       return;
     }
-    if (!window.confirm(`Remove "${player.name}" from this game?`)) return;
+    if (!window.confirm(`Are you sure you want to cancel your spot for ${player.name}? This cannot be undone.`)) return;
     setLeaving(true);
     await onRemove(player.id);
   }
@@ -1104,22 +1104,23 @@ export default function App() {
         ) : view === "list" ? (
           <>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
-              <h2 className="text-base font-black text-gray-900 mb-2">Welcome! 🏓</h2>
+              <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung! 🏓</h2>
               <p className="text-sm text-gray-500 leading-relaxed mb-4">
-                This app was built by pickleballers, for pickleballers. No group chat chaos, no missed sign-ups, no "wait am I in or not?" Just show up, play, and have fun.
+                This is your community spot for finding games, meeting fellow players, and getting on the court. Browse upcoming games, grab a spot, and just show up. Simple as that.
                 <br /><br />
-                If you are looking to have a good game with good people, you're in the right place.
+                To join or host a game, simply sign in with your LINE account.
                 <br /><br />
-                Games fill up fast, so keep an eye on new sessions and grab your spot early. See you on the court!
+                See you on the court!
               </p>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">A few house rules</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">A few house rules to keep things fun for everyone</p>
               <div className="flex flex-col gap-2.5">
                 {[
-                  "Sign up only if you're coming. Spots fill up and people are counting on a full court.",
-                  "Cancel at least 24 hours ahead. Someone on the waitlist will thank you.",
-                  "Pay your share on time. Court fees are split among players and needs to be settled in cash upfront with the host.",
-                  "Arrive 10 minutes early. Games start on time.",
-                  "Be cool. All skill levels are welcome. Encourage beginners, keep the energy positive.",
+                  "Only sign up if you're planning to come. Others are counting on a full court and your spot matters.",
+                  "Need to cancel? Please do it at least 24 hours before the game. Late cancellations mean you'll be asked to cover the session fee next time you join.",
+                  "Settle your court fees in cash with the host before the game starts. It keeps things smooth for everyone.",
+                  "Arrive 10 minutes early. Games start on time and we want everyone warmed up and ready.",
+                  "Be kind and encouraging. All levels are welcome here - cheer on the beginners and keep the vibe positive.",
+                  "No-shows without a heads-up to the host will be noted. Two strikes and your LINE account will be blacklisted!",
                 ].map((rule, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <span className="flex-shrink-0 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white mt-0.5"
