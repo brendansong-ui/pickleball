@@ -350,6 +350,24 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
   // Prevent background scroll on iOS
   useEffect(() => {
     document.body.style.overflow = "hidden";
+    // Block horizontal swipe (iOS back gesture)
+    const el = document.querySelector(".game-detail-scroll");
+    if (el) {
+      let startX = 0, startY = 0;
+      const onStart = (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; };
+      const onMove = (e) => {
+        const dx = Math.abs(e.touches[0].clientX - startX);
+        const dy = Math.abs(e.touches[0].clientY - startY);
+        if (dx > dy) e.preventDefault();
+      };
+      el.addEventListener("touchstart", onStart, { passive: true });
+      el.addEventListener("touchmove", onMove, { passive: false });
+      return () => {
+        document.body.style.overflow = "";
+        el.removeEventListener("touchstart", onStart);
+        el.removeEventListener("touchmove", onMove);
+      };
+    }
     return () => { document.body.style.overflow = ""; };
   }, []);
 
@@ -364,7 +382,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
 
       {/* Full screen overlay with native scroll */}
       <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(0,0,0,0.5)" }}>
-        <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="flex-1 overflow-y-auto overscroll-contain game-detail-scroll">
           <div className="min-h-full flex items-end sm:items-center justify-center p-4 pt-16">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
               <div className="h-2 rounded-t-3xl" style={{ background: isFull ? "#f87171" : spotsLeft <= 2 ? "#fbbf24" : "#4ade80" }} />
@@ -555,6 +573,25 @@ function GameFormModal({ game, onClose, onSave }) {
 
   function update(field, val) { setForm((f) => ({ ...f, [field]: val })); }
 
+  useEffect(() => {
+    const el = document.querySelector(".game-form-scroll");
+    if (!el) return;
+    let startX = 0;
+    let startY = 0;
+    const onStart = (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; };
+    const onMove = (e) => {
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      if (dx > dy) e.preventDefault(); // block horizontal swipe
+    };
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+    };
+  }, []);
+
   async function handleSave() {
     if (!form.title.trim()) { setError("Please enter a game title."); return; }
     if (!form.date) { setError("Please select a date."); return; }
@@ -576,7 +613,7 @@ function GameFormModal({ game, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto overscroll-contain">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto overscroll-contain game-form-scroll">
         <div className="p-6">
           <div className="flex justify-between items-center mb-5">
             <h2 className="text-lg font-bold text-gray-900">{isEdit ? "Edit Game" : "Host a Game"}</h2>
