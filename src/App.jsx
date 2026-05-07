@@ -504,7 +504,7 @@ function GameCard({ game, onClick }) {
             <h3 className="font-bold text-gray-900 text-base leading-tight">{game.title}</h3>
             <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
             {game.createdByName && (
-              <p className="text-xs text-gray-400 mt-0.5">👤 {game.createdByName}</p>
+              <p className="text-xs text-gray-400 mt-0.5">🏅 Host: {game.createdByName}</p>
             )}
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -594,19 +594,61 @@ function GameFormModal({ game, onClose, onSave }) {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Start Time (24hr, e.g. 09:00)</label>
-              <input type="text" inputMode="numeric" placeholder="e.g. 09:00" value={form.time}
-                onChange={(e) => update("time", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Start Time</label>
+              <div className="flex gap-2">
+                <select value={form.time ? form.time.split(":")[0] : ""}
+                  onChange={(e) => {
+                    const min = form.time ? form.time.split(":")[1] || "00" : "00";
+                    update("time", `${e.target.value}:${min}`);
+                  }}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 bg-white">
+                  <option value="">Hour</option>
+                  {Array.from({length: 24}, (_, i) => String(i).padStart(2,"0")).map(h => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+                <select value={form.time ? form.time.split(":")[1] || "" : ""}
+                  onChange={(e) => {
+                    const hr = form.time ? form.time.split(":")[0] || "00" : "00";
+                    update("time", `${hr}:${e.target.value}`);
+                  }}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 bg-white">
+                  <option value="">Min</option>
+                  {["00","15","30","45"].map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
-                End Time <span className="normal-case font-normal text-gray-300">(optional, e.g. 11:00)</span>
+                End Time <span className="normal-case font-normal text-gray-300">(optional)</span>
               </label>
-              <input type="text" inputMode="numeric" placeholder="e.g. 11:00" value={form.endTime}
-                onChange={(e) => update("endTime", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+              <div className="flex gap-2">
+                <select value={form.endTime ? form.endTime.split(":")[0] : ""}
+                  onChange={(e) => {
+                    const min = form.endTime ? form.endTime.split(":")[1] || "00" : "00";
+                    update("endTime", e.target.value ? `${e.target.value}:${min}` : "");
+                  }}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 bg-white">
+                  <option value="">Hour</option>
+                  {Array.from({length: 24}, (_, i) => String(i).padStart(2,"0")).map(h => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+                <select value={form.endTime ? form.endTime.split(":")[1] || "" : ""}
+                  onChange={(e) => {
+                    const hr = form.endTime ? form.endTime.split(":")[0] || "00" : "00";
+                    update("endTime", hr !== "00" || e.target.value ? `${hr}:${e.target.value}` : "");
+                  }}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 bg-white">
+                  <option value="">Min</option>
+                  {["00","15","30","45"].map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>
