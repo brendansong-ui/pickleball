@@ -4,8 +4,6 @@ const SUPABASE_URL = "https://mjucamqnmdjcnkbgkise.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qdWNhbXFubWRqY25rYmdraXNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMzUzMDQsImV4cCI6MjA5MzcxMTMwNH0.lx_Yu6bdNEiDZ70E4QDMZlLPodC1y1jrrUkqU24mDTI";
 const ADMIN_PASSWORD = "Ben150893@PickleballTaichung";
 
-// ─── Supabase helpers ────────────────────────────────────────────────────────
-
 function authHeaders(token) {
   return {
     apikey: SUPABASE_ANON_KEY,
@@ -25,24 +23,19 @@ async function sbFetch(path, options = {}, token = null) {
 }
 
 async function signInWithGoogle() {
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin)}`, {
-    headers: { apikey: SUPABASE_ANON_KEY },
-    redirect: "manual",
-  });
-  // Supabase returns a redirect — we navigate manually
+  const res = await fetch(
+    `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin)}`,
+    { headers: { apikey: SUPABASE_ANON_KEY }, redirect: "manual" }
+  );
   const url = res.headers.get("location") || res.url;
   if (url && url !== window.location.href) window.location.href = url;
 }
 
 async function signOut(token) {
-  await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-    method: "POST",
-    headers: authHeaders(token),
-  });
+  await fetch(`${SUPABASE_URL}/auth/v1/logout`, { method: "POST", headers: authHeaders(token) });
 }
 
 async function getSession() {
-  // Check URL hash for access_token (OAuth redirect)
   const hash = window.location.hash;
   if (hash.includes("access_token")) {
     const params = new URLSearchParams(hash.slice(1));
@@ -61,14 +54,10 @@ async function getSession() {
 async function getUser(token) {
   if (!token) return null;
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: authHeaders(token),
-    });
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: authHeaders(token) });
     if (!res.ok) return null;
     return await res.json();
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 async function fetchGames(token) {
@@ -86,34 +75,23 @@ async function fetchGames(token) {
 
 async function createGame(data, token) {
   return sbFetch("games", {
-    method: "POST",
-    prefer: "return=representation",
+    method: "POST", prefer: "return=representation",
     body: JSON.stringify({
-      title: data.title,
-      date: data.date,
-      time: data.time,
-      end_time: data.endTime || null,
-      location: data.location,
-      location_url: data.locationUrl || null,
-      max_players: data.maxPlayers,
-      price: data.price,
-      created_by: data.createdBy || null,
+      title: data.title, date: data.date, time: data.time,
+      end_time: data.endTime || null, location: data.location,
+      location_url: data.locationUrl || null, max_players: data.maxPlayers,
+      price: data.price, created_by: data.createdBy || null,
     }),
   }, token);
 }
 
 async function updateGame(gameId, data, token) {
   return sbFetch(`games?id=eq.${gameId}`, {
-    method: "PATCH",
-    prefer: "return=representation",
+    method: "PATCH", prefer: "return=representation",
     body: JSON.stringify({
-      title: data.title,
-      date: data.date,
-      time: data.time,
-      end_time: data.endTime || null,
-      location: data.location,
-      location_url: data.locationUrl || null,
-      max_players: data.maxPlayers,
+      title: data.title, date: data.date, time: data.time,
+      end_time: data.endTime || null, location: data.location,
+      location_url: data.locationUrl || null, max_players: data.maxPlayers,
       price: data.price,
     }),
   }, token);
@@ -126,17 +104,10 @@ async function deleteGame(gameId, token) {
 
 async function createRegistration(gameId, player) {
   return sbFetch("registrations", {
-    method: "POST",
-    prefer: "return=representation",
-    body: JSON.stringify({
-      game_id: gameId,
-      name: player.name,
-      dupr_rating: player.duprRating || null,
-    }),
+    method: "POST", prefer: "return=representation",
+    body: JSON.stringify({ game_id: gameId, name: player.name, dupr_rating: player.duprRating || null }),
   });
 }
-
-// ─── Utilities ───────────────────────────────────────────────────────────────
 
 function ratingColor(r) {
   if (!r) return "text-gray-400";
@@ -146,15 +117,11 @@ function ratingColor(r) {
   return "text-amber-500";
 }
 
-function formatTime(t) {
+// Display time as 24hr e.g. "18:30"
+function displayTime(t) {
   if (!t) return "";
-  const [h, m] = t.split(":");
-  const hour = parseInt(h);
-  const ampm = hour >= 12 ? "PM" : "AM";
-  return `${hour % 12 || 12}:${m} ${ampm}`;
+  return t.slice(0, 5);
 }
-
-// ─── Components ──────────────────────────────────────────────────────────────
 
 function SpotsBar({ filled, max }) {
   const pct = Math.round((filled / max) * 100);
@@ -211,8 +178,7 @@ function RegisterModal({ game, onRegister, onClose }) {
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
               placeholder="e.g. Jamie Chen" value={name}
               onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            />
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
@@ -222,8 +188,7 @@ function RegisterModal({ game, onRegister, onClose }) {
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
               placeholder="e.g. 3.75" value={duprRating}
               onChange={(e) => setDuprRating(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            />
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
             <p className="text-xs text-gray-300 mt-1">Enter your DUPR rating so others know your skill level.</p>
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
@@ -238,7 +203,187 @@ function RegisterModal({ game, onRegister, onClose }) {
   );
 }
 
-function GameFormModal({ game, onClose, onSave, userEmail }) {
+// Full game detail modal
+function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, onEdit }) {
+  const [showRegister, setShowRegister] = useState(false);
+  const isFull = game.players.length >= game.maxPlayers;
+  const spotsLeft = game.maxPlayers - game.players.length;
+  const isOwner = user && game.created_by === user.email;
+  const canEdit = isOwner || isAdmin;
+  const canDelete = isAdmin;
+
+  const statusColor = isFull ? "bg-red-50 text-red-500 border-red-100"
+    : spotsLeft <= 2 ? "bg-amber-50 text-amber-600 border-amber-100"
+    : "bg-emerald-50 text-emerald-600 border-emerald-100";
+
+  async function handleDelete() {
+    if (!window.confirm(`Delete "${game.title}"? This cannot be undone.`)) return;
+    await onDelete(game.id);
+    onClose();
+  }
+
+  async function handleRegisterAndRefresh(gameId, player) {
+    await onRegister(gameId, player);
+    setShowRegister(false);
+  }
+
+  return (
+    <>
+      {showRegister && <RegisterModal game={game} onRegister={handleRegisterAndRefresh} onClose={() => setShowRegister(false)} />}
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-40 p-4">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+          {/* Color accent */}
+          <div className="h-2 rounded-t-3xl" style={{ background: isFull ? "#f87171" : spotsLeft <= 2 ? "#fbbf24" : "#4ade80" }} />
+
+          <div className="p-6">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex-1">
+                <h2 className="text-xl font-black text-gray-900 leading-tight">{game.title}</h2>
+                {game.created_by && <p className="text-xs text-gray-300 mt-0.5">Created by {game.created_by}</p>}
+              </div>
+              <div className="flex items-center gap-1.5">
+                {canEdit && (
+                  <button onClick={() => { onEdit(game); onClose(); }}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-400 transition-colors">✏️</button>
+                )}
+                {canDelete && (
+                  <button onClick={handleDelete}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 hover:bg-red-100 text-red-400 transition-colors">🗑</button>
+                )}
+                <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 text-lg">✕</button>
+              </div>
+            </div>
+
+            {/* Details */}
+            <div className="bg-gray-50 rounded-2xl p-4 flex flex-col gap-2.5 mb-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span className="text-base">📅</span>
+                <span>{new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span className="text-base">⏰</span>
+                <span>{displayTime(game.time)}{game.endTime ? ` – ${displayTime(game.endTime)}` : ""}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span className="text-base">📍</span>
+                {game.location_url
+                  ? <a href={game.location_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{game.location}</a>
+                  : <span>{game.location}</span>
+                }
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span className="text-base">{game.price > 0 ? "💵" : "🆓"}</span>
+                <span>{game.price > 0 ? `$${Number(game.price).toFixed(2)} per player` : "Free"}</span>
+              </div>
+            </div>
+
+            {/* Spots bar */}
+            <div className="mb-4">
+              <SpotsBar filled={game.players.length} max={game.maxPlayers} />
+            </div>
+
+            {/* Status badge */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${statusColor}`}>
+                {isFull ? "Game is Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} remaining`}
+              </span>
+            </div>
+
+            {/* Players list */}
+            <div className="mb-5">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+                Registered Players ({game.players.length})
+              </h3>
+              {game.players.length === 0 ? (
+                <p className="text-sm text-gray-300 text-center py-4">No one has registered yet. Be the first!</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {game.players.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">{p.name}</span>
+                      </div>
+                      {p.duprRating != null && (
+                        <span className={`text-xs font-bold ${ratingColor(p.duprRating)}`}>
+                          DUPR {Number(p.duprRating).toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Register button */}
+            {!isFull ? (
+              <button onClick={() => setShowRegister(true)}
+                className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 active:scale-95 transition-all"
+                style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+                + Register for this Game
+              </button>
+            ) : (
+              <div className="w-full py-3 rounded-xl text-sm font-semibold text-red-400 bg-red-50 text-center">
+                This game is full
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function GameCard({ game, onClick }) {
+  const isFull = game.players.length >= game.maxPlayers;
+  const spotsLeft = game.maxPlayers - game.players.length;
+  const pct = game.players.length / game.maxPlayers;
+
+  const statusColor = isFull ? "bg-red-50 text-red-500 border-red-100"
+    : spotsLeft <= 2 ? "bg-amber-50 text-amber-600 border-amber-100"
+    : "bg-emerald-50 text-emerald-600 border-emerald-100";
+
+  return (
+    <div onClick={onClick}
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md active:scale-[0.99] transition-all cursor-pointer">
+      <div className="h-1" style={{ background: isFull ? "#f87171" : pct >= 0.75 ? "#fbbf24" : "#4ade80" }} />
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{game.title}</h3>
+            {game.location_url
+              ? <a href={game.location_url} target="_blank" rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-xs text-blue-500 hover:underline mt-0.5 flex items-center gap-1">📍 {game.location}</a>
+              : <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
+            }
+          </div>
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex-shrink-0 ${statusColor}`}>
+            {isFull ? "Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-4">
+          <span>📅 {new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
+          <span>⏰ {displayTime(game.time)}{game.endTime ? ` – ${displayTime(game.endTime)}` : ""}</span>
+          {game.price > 0
+            ? <span className="text-emerald-600 font-semibold">💵 ${Number(game.price).toFixed(2)}/player</span>
+            : <span className="text-emerald-500 font-semibold">🆓 Free</span>
+          }
+        </div>
+
+        <SpotsBar filled={game.players.length} max={game.maxPlayers} />
+
+        <p className="text-xs text-gray-300 mt-3 text-right">Tap to see details & register →</p>
+      </div>
+    </div>
+  );
+}
+
+function GameFormModal({ game, onClose, onSave }) {
   const isEdit = !!game;
   const [form, setForm] = useState({
     title: game?.title || "",
@@ -256,8 +401,8 @@ function GameFormModal({ game, onClose, onSave, userEmail }) {
   function update(field, val) { setForm((f) => ({ ...f, [field]: val })); }
 
   async function handleSave() {
-    if (!form.title || !form.date || !form.time || !form.location) {
-      setError("Please fill in all required fields.");
+    if (!form.title.trim() || !form.date || !form.time || !form.location.trim()) {
+      setError("Please fill in title, date, time, and location.");
       return;
     }
     setLoading(true);
@@ -289,7 +434,7 @@ function GameFormModal({ game, onClose, onSave, userEmail }) {
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Start Time</label>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Start Time (24hr)</label>
               <input type="time" value={form.time} onChange={(e) => update("time", e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
             </div>
@@ -374,103 +519,13 @@ function AdminLoginModal({ onSuccess, onClose }) {
   );
 }
 
-function GameCard({ game, onRegister, user, isAdmin, onDelete, onEdit }) {
-  const [showRegister, setShowRegister] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const isFull = game.players.length >= game.maxPlayers;
-  const spotsLeft = game.maxPlayers - game.players.length;
-  const pct = game.players.length / game.maxPlayers;
-  const isOwner = user && game.created_by === user.email;
-  const canEdit = isOwner || isAdmin;
-  const canDelete = isAdmin;
-
-  const statusColor = isFull ? "bg-red-50 text-red-500 border-red-100"
-    : spotsLeft <= 2 ? "bg-amber-50 text-amber-600 border-amber-100"
-    : "bg-emerald-50 text-emerald-600 border-emerald-100";
-
-  async function handleDelete() {
-    if (!window.confirm(`Delete "${game.title}"? This cannot be undone.`)) return;
-    setDeleting(true);
-    await onDelete(game.id);
-  }
-
-  return (
-    <>
-      {showRegister && <RegisterModal game={game} onRegister={onRegister} onClose={() => setShowRegister(false)} />}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-        <div className="h-1" style={{ background: isFull ? "#f87171" : pct >= 0.75 ? "#fbbf24" : "#4ade80" }} />
-        <div className="p-5">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{game.title}</h3>
-              {game.location_url
-                ? <a href={game.location_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline mt-0.5 flex items-center gap-1">📍 {game.location}</a>
-                : <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
-              }
-              {game.created_by && <p className="text-xs text-gray-300 mt-0.5">by {game.created_by}</p>}
-            </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
-                {isFull ? "Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`}
-              </span>
-              {canEdit && (
-                <button onClick={() => onEdit(game)}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-400 text-sm transition-colors"
-                  title="Edit game">✏️</button>
-              )}
-              {canDelete && (
-                <button onClick={handleDelete} disabled={deleting}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 hover:bg-red-100 text-red-400 text-sm transition-colors disabled:opacity-50"
-                  title="Delete game">🗑</button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-4">
-            <span>📅 {new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
-            <span>⏰ {formatTime(game.time)}{game.endTime ? ` – ${formatTime(game.endTime)}` : ""}</span>
-            {game.price > 0
-              ? <span className="text-emerald-600 font-semibold">💵 ${Number(game.price).toFixed(2)}/player</span>
-              : <span className="text-emerald-500 font-semibold">🆓 Free</span>}
-          </div>
-
-          <SpotsBar filled={game.players.length} max={game.maxPlayers} />
-
-          {game.players.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              {game.players.map((p, i) => (
-                <div key={i} className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-full pl-2 pr-2.5 py-0.5">
-                  <span className="text-xs text-gray-600 font-medium">{p.name}</span>
-                  {p.duprRating != null && <span className={`text-xs font-bold ${ratingColor(p.duprRating)}`}>· {Number(p.duprRating).toFixed(2)}</span>}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-4">
-            {!isFull
-              ? <button onClick={() => setShowRegister(true)}
-                  className="w-full py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 active:scale-95 transition-all"
-                  style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-                  + Register
-                </button>
-              : <div className="w-full py-2.5 rounded-xl text-sm font-semibold text-red-400 bg-red-50 text-center">Game is Full</div>
-            }
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-function CalendarView({ games, onRegister, user, isAdmin, onDelete, onEdit }) {
+function CalendarView({ games, onGameClick }) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState(null);
 
-  const monthStart = new Date(year, month, 1);
-  const startPad = monthStart.getDay();
+  const startPad = new Date(year, month, 1).getDay();
   const totalDays = new Date(year, month + 1, 0).getDate();
 
   const gamesByDate = {};
@@ -479,8 +534,8 @@ function CalendarView({ games, onRegister, user, isAdmin, onDelete, onEdit }) {
     gamesByDate[g.date].push(g);
   });
 
-  function prevMonth() { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); setSelectedDate(null); }
-  function nextMonth() { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); setSelectedDate(null); }
+  function prevMonth() { if (month === 0) { setMonth(11); setYear(y => y-1); } else setMonth(m => m-1); setSelectedDate(null); }
+  function nextMonth() { if (month === 11) { setMonth(0); setYear(y => y+1); } else setMonth(m => m+1); setSelectedDate(null); }
 
   const selectedGames = selectedDate ? (gamesByDate[selectedDate] || []) : [];
 
@@ -527,7 +582,7 @@ function CalendarView({ games, onRegister, user, isAdmin, onDelete, onEdit }) {
             ? <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-sm text-gray-300">No games on this day.</div>
             : <div className="flex flex-col gap-4">
                 {selectedGames.map((game) => (
-                  <GameCard key={game.id} game={game} onRegister={onRegister} user={user} isAdmin={isAdmin} onDelete={onDelete} onEdit={onEdit} />
+                  <GameCard key={game.id} game={game} onClick={() => onGameClick(game)} />
                 ))}
               </div>
           }
@@ -538,8 +593,6 @@ function CalendarView({ games, onRegister, user, isAdmin, onDelete, onEdit }) {
   );
 }
 
-// ─── App ─────────────────────────────────────────────────────────────────────
-
 export default function App() {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -547,7 +600,8 @@ export default function App() {
   const [token, setToken] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [gameForm, setGameForm] = useState(null); // null = closed, {} = create, {game} = edit
+  const [gameForm, setGameForm] = useState(null);
+  const [selectedGame, setSelectedGame] = useState(null);
   const [view, setView] = useState("list");
 
   useEffect(() => {
@@ -567,12 +621,16 @@ export default function App() {
     try {
       const data = await fetchGames(t);
       setGames(data);
+      // refresh selected game if open
+      if (selectedGame) {
+        const updated = data.find(g => g.id === selectedGame.id);
+        if (updated) setSelectedGame(updated);
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   }
 
   async function handleSignIn() { await signInWithGoogle(); }
-
   async function handleSignOut() {
     await signOut(token);
     sessionStorage.removeItem("sb_token");
@@ -596,6 +654,7 @@ export default function App() {
 
   async function handleDelete(gameId) {
     await deleteGame(gameId, token);
+    setSelectedGame(null);
     await loadGames();
   }
 
@@ -604,15 +663,21 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {gameForm !== null && (
-        <GameFormModal
-          game={gameForm?.id ? gameForm : null}
-          onClose={() => setGameForm(null)}
-          onSave={handleSaveGame}
-          userEmail={user?.email}
-        />
+        <GameFormModal game={gameForm?.id ? gameForm : null} onClose={() => setGameForm(null)} onSave={handleSaveGame} />
       )}
       {showAdminLogin && (
         <AdminLoginModal onSuccess={() => setIsAdmin(true)} onClose={() => setShowAdminLogin(false)} />
+      )}
+      {selectedGame && (
+        <GameDetailModal
+          game={selectedGame}
+          onClose={() => setSelectedGame(null)}
+          onRegister={handleRegister}
+          user={user}
+          isAdmin={isAdmin}
+          onDelete={handleDelete}
+          onEdit={(g) => { setGameForm(g); setSelectedGame(null); }}
+        />
       )}
 
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
@@ -634,7 +699,8 @@ export default function App() {
                   + New Game
                 </button>
                 <div className="flex items-center gap-1">
-                  <img src={user.user_metadata?.avatar_url} className="w-7 h-7 rounded-full" alt="" onError={(e) => e.target.style.display="none"} />
+                  <img src={user.user_metadata?.avatar_url} className="w-7 h-7 rounded-full" alt=""
+                    onError={(e) => e.target.style.display="none"} />
                   <button onClick={handleSignOut} className="text-xs text-gray-400 hover:text-gray-600 px-1">Sign out</button>
                 </div>
               </>
@@ -682,15 +748,13 @@ export default function App() {
               ? <div className="text-center text-gray-300 text-sm py-20"><p className="text-4xl mb-3">🏓</p><p>No games yet.</p></div>
               : <div className="flex flex-col gap-4">
                   {sorted.map((game) => (
-                    <GameCard key={game.id} game={game} onRegister={handleRegister}
-                      user={user} isAdmin={isAdmin} onDelete={handleDelete} onEdit={(g) => setGameForm(g)} />
+                    <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
                   ))}
                 </div>
             }
           </>
         ) : (
-          <CalendarView games={games} onRegister={handleRegister}
-            user={user} isAdmin={isAdmin} onDelete={handleDelete} onEdit={(g) => setGameForm(g)} />
+          <CalendarView games={games} onGameClick={(game) => setSelectedGame(game)} />
         )}
       </main>
     </div>
