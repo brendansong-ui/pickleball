@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 const SUPABASE_URL = "https://mjucamqnmdjcnkbgkise.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qdWNhbXFubWRqY25rYmdraXNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMzUzMDQsImV4cCI6MjA5MzcxMTMwNH0.lx_Yu6bdNEiDZ70E4QDMZlLPodC1y1jrrUkqU24mDTI";
@@ -100,75 +100,7 @@ function SpotsBar({ filled, max }) {
   );
 }
 
-// Google Maps place search input
-function PlaceSearchInput({ value, onChange, onPlaceSelect }) {
-  const [query, setQuery] = useState(value || "");
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const debounce = useRef(null);
 
-  async function searchPlaces(q) {
-    if (!q || q.length < 3) { setResults([]); return; }
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`,
-        { headers: { "Accept-Language": "en" } }
-      );
-      const data = await res.json();
-      setResults(data);
-    } catch (e) {
-      setResults([]);
-    }
-    setLoading(false);
-  }
-
-  function handleChange(e) {
-    const q = e.target.value;
-    setQuery(q);
-    onChange(q, null);
-    clearTimeout(debounce.current);
-    debounce.current = setTimeout(() => searchPlaces(q), 400);
-  }
-
-  function handleSelect(place) {
-    const name = place.display_name;
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
-    setQuery(name);
-    setResults([]);
-    onChange(name, url);
-    onPlaceSelect && onPlaceSelect(name, url);
-  }
-
-  return (
-    <div className="relative">
-      <input
-        type="text"
-        placeholder="Search for a location..."
-        value={query}
-        onChange={handleChange}
-        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-navy-400 focus:ring-1 focus:ring-blue-100"
-      />
-      {loading && (
-        <div className="absolute right-3 top-2.5 text-gray-300 text-xs">Searching...</div>
-      )}
-      {results.length > 0 && (
-        <div className="absolute z-50 w-full bg-white border border-gray-100 rounded-xl shadow-lg mt-1 overflow-hidden">
-          {results.map((place) => (
-            <button
-              key={place.place_id}
-              onClick={() => handleSelect(place)}
-              className="w-full text-left px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 border-b border-gray-50 last:border-0 transition-colors"
-            >
-              <span className="font-medium">{place.name || place.display_name.split(",")[0]}</span>
-              <span className="text-gray-400 ml-1">{place.display_name.split(",").slice(1, 3).join(",")}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function RegisterModal({ game, onRegister, onClose }) {
   const [name, setName] = useState("");
@@ -513,18 +445,27 @@ function AdminModal({ onClose, onCreate }) {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Location</label>
-            <PlaceSearchInput
-              value={form.location}
-              onChange={(name, url) => update("location", name) || update("locationUrl", url || "")}
-              onPlaceSelect={(name, url) => {
-                update("location", name);
-                update("locationUrl", url);
-              }}
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Location Name</label>
+            <input
+              type="text" placeholder="e.g. Zhongshan Park Court 3"
+              value={form.location} onChange={(e) => update("location", e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
             />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+              Google Maps Link <span className="normal-case font-normal text-gray-300">(optional)</span>
+            </label>
+            <input
+              type="url" placeholder="Paste Google Maps URL here"
+              value={form.locationUrl} onChange={(e) => update("locationUrl", e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
+            />
+            <p className="text-xs text-gray-300 mt-1">Open Google Maps, find the location, copy the link from your browser and paste it here.</p>
             {form.locationUrl && (
               <a href={form.locationUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline mt-1 block">
-                View on Google Maps ↗
+                Preview on Google Maps ↗
               </a>
             )}
           </div>
