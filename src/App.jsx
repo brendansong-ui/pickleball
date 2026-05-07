@@ -820,6 +820,13 @@ export default function App() {
   const [view, setView] = useState("list");
 
   useEffect(() => {
+    // Prevent pinch-to-zoom on iOS Safari
+    const preventZoom = (e) => { if (e.touches.length > 1) e.preventDefault(); };
+    document.addEventListener("touchmove", preventZoom, { passive: false });
+    return () => document.removeEventListener("touchmove", preventZoom);
+  }, []);
+
+  useEffect(() => {
     async function init() {
       const t = await getSession();
       if (t) {
