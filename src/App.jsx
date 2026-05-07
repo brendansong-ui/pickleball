@@ -62,7 +62,11 @@ async function getSession() {
     try {
       const res = await fetch("https://mjucamqnmdjcnkbgkise.supabase.co/functions/v1/line-auth", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
         body: JSON.stringify({ code: lineCode, redirect_uri: LINE_REDIRECT_URI }),
       });
       if (res.ok) {
@@ -71,6 +75,10 @@ async function getSession() {
           sessionStorage.setItem("sb_token", data.access_token);
           if (data.refresh_token) sessionStorage.setItem("sb_refresh", data.refresh_token);
           return data.access_token;
+        } else if (data.magic_link) {
+          // Redirect to magic link to complete sign in
+          window.location.href = data.magic_link;
+          return null;
         }
       } else {
         const err = await res.text();
