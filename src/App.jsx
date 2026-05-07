@@ -540,8 +540,10 @@ function GameFormModal({ game, onClose, onSave }) {
   const [form, setForm] = useState({
     title: game?.title || "",
     date: game?.date || "",
-    time: game?.time || "",
-    endTime: game?.endTime || "",
+    timeHr: game?.time ? game.time.split(":")[0] : "",
+    timeMin: game?.time ? game.time.split(":")[1] || "00" : "",
+    endTimeHr: game?.endTime ? game.endTime.split(":")[0] : "",
+    endTimeMin: game?.endTime ? game.endTime.split(":")[1] || "00" : "",
     location: game?.location || "",
     locationUrl: game?.location_url || "",
     maxPlayers: game?.maxPlayers || 8,
@@ -557,14 +559,16 @@ function GameFormModal({ game, onClose, onSave }) {
     if (!form.title.trim()) { setError("Please enter a game title."); return; }
     if (!form.date) { setError("Please select a date."); return; }
     if (form.date < today) { setError("Date cannot be in the past."); return; }
-    if (!form.time) { setError("Please enter a start time."); return; }
+    if (!form.timeHr || !form.timeMin) { setError("Please select a start time."); return; }
     if (!form.location.trim()) { setError("Please enter a location."); return; }
     if (form.price === "" || form.price === null || form.price === undefined) {
       setError("Please enter a price (enter 0 if free)."); return;
     }
+    const time = `${form.timeHr}:${form.timeMin}`;
+    const endTime = form.endTimeHr && form.endTimeMin ? `${form.endTimeHr}:${form.endTimeMin}` : "";
     setLoading(true);
     try {
-      await onSave({ ...form, maxPlayers: Number(form.maxPlayers), courts: Number(form.courts), price: Number(form.price) });
+      await onSave({ ...form, time, endTime, maxPlayers: Number(form.maxPlayers), courts: Number(form.courts), price: Number(form.price) });
       onClose();
     } catch (e) { setError("Something went wrong: " + e.message); }
     setLoading(false);
@@ -596,23 +600,17 @@ function GameFormModal({ game, onClose, onSave }) {
             <div>
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Start Time</label>
               <div className="flex gap-2">
-                <select value={form.time ? form.time.split(":")[0] : ""}
-                  onChange={(e) => {
-                    const min = form.time ? form.time.split(":")[1] || "00" : "00";
-                    update("time", `${e.target.value}:${min}`);
-                  }}
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 bg-white">
+                <select value={form.timeHr}
+                  onChange={(e) => update("timeHr", e.target.value)}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 bg-white">
                   <option value="">Hour</option>
                   {Array.from({length: 24}, (_, i) => String(i).padStart(2,"0")).map(h => (
                     <option key={h} value={h}>{h}</option>
                   ))}
                 </select>
-                <select value={form.time ? form.time.split(":")[1] || "" : ""}
-                  onChange={(e) => {
-                    const hr = form.time ? form.time.split(":")[0] || "00" : "00";
-                    update("time", `${hr}:${e.target.value}`);
-                  }}
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 bg-white">
+                <select value={form.timeMin}
+                  onChange={(e) => update("timeMin", e.target.value)}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 bg-white">
                   <option value="">Min</option>
                   {["00","15","30","45"].map(m => (
                     <option key={m} value={m}>{m}</option>
@@ -626,23 +624,17 @@ function GameFormModal({ game, onClose, onSave }) {
                 End Time <span className="normal-case font-normal text-gray-300">(optional)</span>
               </label>
               <div className="flex gap-2">
-                <select value={form.endTime ? form.endTime.split(":")[0] : ""}
-                  onChange={(e) => {
-                    const min = form.endTime ? form.endTime.split(":")[1] || "00" : "00";
-                    update("endTime", e.target.value ? `${e.target.value}:${min}` : "");
-                  }}
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 bg-white">
+                <select value={form.endTimeHr}
+                  onChange={(e) => update("endTimeHr", e.target.value)}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 bg-white">
                   <option value="">Hour</option>
                   {Array.from({length: 24}, (_, i) => String(i).padStart(2,"0")).map(h => (
                     <option key={h} value={h}>{h}</option>
                   ))}
                 </select>
-                <select value={form.endTime ? form.endTime.split(":")[1] || "" : ""}
-                  onChange={(e) => {
-                    const hr = form.endTime ? form.endTime.split(":")[0] || "00" : "00";
-                    update("endTime", hr !== "00" || e.target.value ? `${hr}:${e.target.value}` : "");
-                  }}
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 bg-white">
+                <select value={form.endTimeMin}
+                  onChange={(e) => update("endTimeMin", e.target.value)}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 bg-white">
                   <option value="">Min</option>
                   {["00","15","30","45"].map(m => (
                     <option key={m} value={m}>{m}</option>
