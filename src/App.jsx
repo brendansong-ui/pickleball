@@ -64,6 +64,13 @@ async function createRegistration(gameId, player) {
   });
 }
 
+async function deleteGame(gameId) {
+  await sbFetch(`registrations?game_id=eq.${gameId}`, { method: "DELETE" });
+  await sbFetch(`games?id=eq.${gameId}`, { method: "DELETE" });
+}
+
+const ADMIN_PASSWORD = "Ben150893@PickleballTaichung";
+
 function ratingColor(r) {
   if (!r) return "text-gray-400";
   if (r >= 4.5) return "text-purple-500";
@@ -181,8 +188,9 @@ function RegisterModal({ game, onRegister, onClose }) {
   );
 }
 
-function GameCard({ game, onRegister }) {
+function GameCard({ game, onRegister, isAdmin, onDelete }) {
   const [showModal, setShowModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const isFull = game.players.length >= game.maxPlayers;
   const spotsLeft = game.maxPlayers - game.players.length;
   const pct = game.players.length / game.maxPlayers;
@@ -195,13 +203,18 @@ function GameCard({ game, onRegister }) {
 
   const statusLabel = isFull ? "Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`;
 
+  async function handleDelete() {
+    if (!window.confirm(`Delete "${game.title}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    await onDelete(game.id);
+  }
+
   return (
     <>
       {showModal && (
         <RegisterModal game={game} onRegister={onRegister} onClose={() => setShowModal(false)} />
       )}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-        {/* Card header accent */}
         <div className="h-1" style={{ background: isFull ? "#f87171" : pct >= 0.75 ? "#fbbf24" : "#4ade80" }} />
 
         <div className="p-5">
@@ -209,21 +222,29 @@ function GameCard({ game, onRegister }) {
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{game.title}</h3>
               {game.location_url ? (
-                <a
-                  href={game.location_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-500 hover:underline mt-0.5 flex items-center gap-1"
-                >
+                <a href={game.location_url} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-blue-500 hover:underline mt-0.5 flex items-center gap-1">
                   📍 {game.location}
                 </a>
               ) : (
                 <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
               )}
             </div>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex-shrink-0 ${statusColor}`}>
-              {statusLabel}
-            </span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
+                {statusLabel}
+              </span>
+              {isAdmin && (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 hover:bg-red-100 text-red-400 text-sm transition-colors disabled:opacity-50"
+                  title="Delete game"
+                >
+                  🗑
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-4">
@@ -277,7 +298,7 @@ function GameCard({ game, onRegister }) {
   );
 }
 
-function CalendarView({ games, onRegister }) {
+function CalendarView({ games, onRegister, isAdmin, onDelete }) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -363,7 +384,7 @@ function CalendarView({ games, onRegister }) {
           ) : (
             <div className="flex flex-col gap-4">
               {selectedGames.map((game) => (
-                <GameCard key={game.id} game={game} onRegister={onRegister} />
+                <GameCard key={game.id} game={game} onRegister={onRegister} isAdmin={isAdmin} onDelete={onDelete} />
               ))}
             </div>
           )}
@@ -508,10 +529,56 @@ function AdminModal({ onClose, onCreate }) {
   );
 }
 
+function AdminLoginModal({ onSuccess, onClose }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  function handleSubmit() {
+    if (password === ADMIN_PASSWORD) {
+      onSuccess();
+      onClose();
+    } else {
+      setError("Incorrect password.");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-base font-bold text-gray-900">Admin Login</h2>
+          <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-xl">✕</button>
+        </div>
+        <div className="flex flex-col gap-3">
+          <input
+            autoFocus
+            type="password"
+            placeholder="Enter admin password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
+          />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <button
+            onClick={handleSubmit}
+            className="w-full py-2.5 rounded-xl font-bold text-sm text-white"
+            style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}
+          >
+            Log In
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAdmin, setShowAdmin] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [view, setView] = useState("list");
 
   async function loadGames() {
@@ -536,38 +603,59 @@ export default function App() {
     await loadGames();
   }
 
+  async function handleDelete(gameId) {
+    await deleteGame(gameId);
+    await loadGames();
+  }
+
   const sorted = [...games].sort((a, b) => new Date(a.date) - new Date(b.date));
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {showAdmin && (
-        <AdminModal onClose={() => setShowAdmin(false)} onCreate={handleCreate} />
+      {showCreateModal && (
+        <AdminModal onClose={() => setShowCreateModal(false)} onCreate={handleCreate} />
+      )}
+      {showAdminLogin && (
+        <AdminLoginModal
+          onSuccess={() => setIsAdmin(true)}
+          onClose={() => setShowAdminLogin(false)}
+        />
       )}
 
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="Taichung Pickleball Community"
-              className="w-10 h-10 object-contain"
-            />
+            <img src="/logo.png" alt="Taichung Pickleball Community" className="w-10 h-10 object-contain" />
             <div>
               <h1 className="font-black text-gray-900 text-base leading-tight tracking-tight">Pickleball Taichung</h1>
               <p className="text-xs text-gray-400">Find & join games</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowAdmin(true)}
-            className="text-white text-sm font-bold px-4 py-2 rounded-xl transition-all hover:opacity-90 shadow-sm"
-            style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}
-          >
-            + New Game
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="text-white text-sm font-bold px-4 py-2 rounded-xl transition-all hover:opacity-90 shadow-sm"
+              style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}
+            >
+              + New Game
+            </button>
+            {isAdmin ? (
+              <>
+                <span className="text-xs text-emerald-500 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full">Admin</span>
+                <button onClick={() => setIsAdmin(false)} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-2">Exit</button>
+              </>
+            ) : (
+              <button
+                onClick={() => setShowAdminLogin(true)}
+                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-2"
+                title="Admin login"
+              >
+                ⚙️
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* View toggle */}
         <div className="max-w-2xl mx-auto px-4 pb-3 flex gap-1">
           {[
             { id: "list", label: "📋 List" },
@@ -577,9 +665,7 @@ export default function App() {
               key={v.id}
               onClick={() => setView(v.id)}
               className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                view === v.id
-                  ? "text-white"
-                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                view === v.id ? "text-white" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
               }`}
               style={view === v.id ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : {}}
             >
@@ -608,13 +694,13 @@ export default function App() {
             ) : (
               <div className="flex flex-col gap-4">
                 {sorted.map((game) => (
-                  <GameCard key={game.id} game={game} onRegister={handleRegister} />
+                  <GameCard key={game.id} game={game} onRegister={handleRegister} isAdmin={isAdmin} onDelete={handleDelete} />
                 ))}
               </div>
             )}
           </>
         ) : (
-          <CalendarView games={games} onRegister={handleRegister} />
+          <CalendarView games={games} onRegister={handleRegister} isAdmin={isAdmin} onDelete={handleDelete} />
         )}
       </main>
     </div>
