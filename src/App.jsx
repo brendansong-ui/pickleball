@@ -1018,6 +1018,7 @@ export default function App() {
               + Host Game
             </button>
           ) : (
+            <>
             <button onClick={handleSignIn}
               className="flex items-center gap-1.5 text-white text-sm font-bold px-3 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
               style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
@@ -1037,6 +1038,7 @@ export default function App() {
               </svg>
               LINE
             </button>
+            </>
           )}
           <div className="flex gap-1 ml-auto">
             {[{ id: "list", label: "📋 List" }, { id: "calendar", label: "📅 Calendar" }].map((v) => (
