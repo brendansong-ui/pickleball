@@ -23,6 +23,9 @@ async function sbFetch(path, options = {}, token = null) {
   return text ? JSON.parse(text) : null;
 }
 
+const LINE_CHANNEL_ID = "2010007017";
+const LINE_REDIRECT_URI = "https://pickleball-iota-one.vercel.app/line-callback";
+
 async function signInWithGoogle() {
   const res = await fetch(
     `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin)}`,
@@ -32,11 +35,50 @@ async function signInWithGoogle() {
   if (url && url !== window.location.href) window.location.href = url;
 }
 
+function signInWithLINE() {
+  const state = Math.random().toString(36).slice(2);
+  sessionStorage.setItem("line_state", state);
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: LINE_CHANNEL_ID,
+    redirect_uri: LINE_REDIRECT_URI,
+    state,
+    scope: "profile openid email",
+  });
+  window.location.href = `https://access.line.me/oauth2/v2.1/authorize?${params}`;
+}
+
 async function signOut(token) {
   await fetch(`${SUPABASE_URL}/auth/v1/logout`, { method: "POST", headers: authHeaders(token) });
 }
 
 async function getSession() {
+  // Handle LINE callback
+  const urlParams = new URLSearchParams(window.location.search);
+  const lineCode = urlParams.get("code");
+  const lineState = urlParams.get("state");
+  if (lineCode && lineState && lineState === sessionStorage.getItem("line_state")) {
+    sessionStorage.removeItem("line_state");
+    window.history.replaceState(null, "", window.location.pathname);
+    // Exchange code for token via our edge function proxy
+    try {
+      const res = await fetch("https://mjucamqnmdjcnkbgkise.supabase.co/functions/v1/line-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+        body: JSON.stringify({ code: lineCode, redirect_uri: LINE_REDIRECT_URI }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          sessionStorage.setItem("sb_token", data.access_token);
+          if (data.refresh_token) sessionStorage.setItem("sb_refresh", data.refresh_token);
+          return data.access_token;
+        }
+      }
+    } catch (e) { console.error("LINE auth error", e); }
+  }
+
+  // Handle Google/Supabase OAuth callback
   const hash = window.location.hash;
   if (hash.includes("access_token")) {
     const params = new URLSearchParams(hash.slice(1));
@@ -977,7 +1019,7 @@ export default function App() {
             </button>
           ) : (
             <button onClick={handleSignIn}
-              className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 text-white text-sm font-bold px-3 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
               style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
               <svg width="13" height="13" viewBox="0 0 48 48">
                 <path fill="#fff" opacity="0.9" d="M24 9.5c3.2 0 5.9 1.1 8.1 2.9l6-6C34.5 3.1 29.6 1 24 1 14.8 1 6.9 6.6 3.4 14.6l7 5.4C12.1 13.4 17.6 9.5 24 9.5z"/>
@@ -985,7 +1027,15 @@ export default function App() {
                 <path fill="#fff" opacity="0.8" d="M10.4 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7-5.4A23.9 23.9 0 0 0 .5 24c0 3.9.9 7.5 2.6 10.7l7.3-6.1z"/>
                 <path fill="#fff" d="M24 47c5.4 0 10-1.8 13.3-4.8l-7.4-5.7c-1.8 1.2-4.1 2-6.9 2-5.4 0-10-3.6-11.7-8.6l-7.3 6.1C6.8 41.3 14.8 47 24 47z"/>
               </svg>
-              Sign in to host
+              Google
+            </button>
+            <button onClick={() => signInWithLINE()}
+              className="flex items-center gap-1.5 text-white text-sm font-bold px-3 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
+              style={{ background: "#06C755" }}>
+              <svg width="13" height="13" viewBox="0 0 48 48" fill="white">
+                <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4zm-6.5 22.5h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm3 0a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v8a1 1 0 0 1-1 1zm9 0h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm5-3.5h-3v-1.5h3a1 1 0 0 1 0 2zm0-3h-3V18.5h3a1 1 0 0 1 0 2z"/>
+              </svg>
+              LINE
             </button>
           )}
           <div className="flex gap-1 ml-auto">
