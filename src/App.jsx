@@ -157,6 +157,7 @@ async function fetchGames(token) {
         id: r.id,
         name: r.name,
         duprRating: r.dupr_rating,
+        avatarUrl: r.avatar_url || null,
         isHost: r.is_host || false,
         canLeave: !!myTokens[r.id] && myTokens[r.id] === r.guest_token && !r.is_host,
       })),
@@ -166,6 +167,7 @@ async function fetchGames(token) {
         id: r.id,
         name: r.name,
         duprRating: r.dupr_rating,
+        avatarUrl: r.avatar_url || null,
         canLeave: !!myTokens[r.id] && myTokens[r.id] === r.guest_token,
       })),
   }));
@@ -188,7 +190,7 @@ async function createGame(data, token) {
       method: "POST", prefer: "return=representation",
       body: JSON.stringify({
         game_id: result[0].id, name: data.createdByName || data.createdBy,
-        dupr_rating: null, is_waitlist: false,
+        dupr_rating: null, is_waitlist: false, avatar_url: data.createdByAvatar || null,
         guest_token: guestToken, is_host: true,
       }),
     });
@@ -221,6 +223,7 @@ async function createRegistration(gameId, player, isWaitlist = false) {
     body: JSON.stringify({
       game_id: gameId, name: player.name,
       dupr_rating: player.duprRating || null,
+      avatar_url: player.avatarUrl || null,
       is_waitlist: isWaitlist, guest_token: guestToken,
     }),
   });
@@ -285,9 +288,12 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove }) {
   return (
     <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
       <div className="flex items-center gap-2.5">
-        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden
           ${isWaitlist ? "bg-amber-400" : player.isHost ? "bg-gradient-to-br from-green-400 to-green-600" : "bg-gradient-to-br from-blue-400 to-blue-600"}`}>
-          {isWaitlist ? index + 1 : player.name.charAt(0).toUpperCase()}
+          {player.avatarUrl
+            ? <img src={player.avatarUrl} className="w-full h-full object-cover" alt="" onError={(e) => e.target.style.display="none"} />
+            : isWaitlist ? index + 1 : player.name.charAt(0).toUpperCase()
+          }
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-medium text-gray-700">{player.name}</span>
@@ -314,15 +320,15 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove }) {
   );
 }
 
-function RegisterModal({ game, onRegister, onClose }) {
+function RegisterModal({ game, onRegister, onClose, user }) {
   const isFull = game.players.length >= game.maxPlayers;
-  const [name, setName] = useState("");
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "";
+  const avatarUrl = user?.user_metadata?.avatar_url || null;
   const [duprRating, setDuprRating] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSubmit() {
-    if (!name.trim()) { setError("Please enter your name."); return; }
     const rating = duprRating ? parseFloat(duprRating) : null;
     if (duprRating && (isNaN(rating) || rating < 1 || rating > 6)) {
       setError("DUPR rating must be between 1 and 6.");
@@ -331,7 +337,7 @@ function RegisterModal({ game, onRegister, onClose }) {
     setLoading(true);
     setError("");
     try {
-      await onRegister(game.id, { name: name.trim(), duprRating: rating }, isFull);
+      await onRegister(game.id, { name: displayName, duprRating: rating, avatarUrl }, isFull);
       onClose();
     } catch { setError("Something went wrong. Please try again."); }
     setLoading(false);
@@ -340,27 +346,36 @@ function RegisterModal({ game, onRegister, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6">
-        <div className="flex justify-between items-start mb-1">
+        <div className="flex justify-between items-start mb-4">
           <div>
             <h2 className="text-base font-bold text-gray-900">{isFull ? "Join Waitlist" : "Join Game"}</h2>
             <p className="text-xs text-gray-400 mt-0.5">{game.title}</p>
           </div>
           <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-xl leading-none mt-0.5">✕</button>
         </div>
+
         {isFull && (
-          <div className="mt-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 text-xs text-amber-600">
+          <div className="mb-4 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 text-xs text-amber-600">
             This game is full. You'll be added to the waitlist.
           </div>
         )}
-        <div className="mt-4 flex flex-col gap-3">
+
+        {/* Show signed-in user */}
+        <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-3 mb-4">
+          {avatarUrl ? (
+            <img src={avatarUrl} className="w-9 h-9 rounded-full object-cover" alt="" onError={(e) => e.target.style.display="none"} />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Your Name</label>
-            <input autoFocus
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
-              placeholder="e.g. Jamie Chen" value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
+            <p className="text-sm font-semibold text-gray-800">{displayName}</p>
+            <p className="text-xs text-gray-400">Registering as this account</p>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
               DUPR Rating <span className="normal-case font-normal text-gray-300">(optional)</span>
@@ -430,7 +445,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
   return (
     <>
       {showRegister && (
-        <RegisterModal game={game} onRegister={async (gid, player, isWaitlist) => {
+        <RegisterModal game={game} user={user} onRegister={async (gid, player, isWaitlist) => {
           await onRegister(gid, player, isWaitlist);
           setShowRegister(false);
         }} onClose={() => setShowRegister(false)} />
@@ -534,18 +549,60 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                 {/* Action */}
                 <div className="pb-2">
                   {!isFull ? (
+                  user ? (
                     <button onClick={() => setShowRegister(true)}
                       className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
                       style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
                       + Register for this Game
                     </button>
                   ) : (
+                    <div className="text-center bg-gray-50 rounded-2xl p-4">
+                      <p className="text-sm text-gray-500 mb-3">Sign in to register for this game</p>
+                      <div className="flex gap-2 justify-center">
+                        <button onClick={signInWithGoogle}
+                          className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl"
+                          style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+                          <svg width="13" height="13" viewBox="0 0 48 48">
+                            <path fill="#fff" opacity="0.9" d="M24 9.5c3.2 0 5.9 1.1 8.1 2.9l6-6C34.5 3.1 29.6 1 24 1 14.8 1 6.9 6.6 3.4 14.6l7 5.4C12.1 13.4 17.6 9.5 24 9.5z"/>
+                            <path fill="#fff" opacity="0.7" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-16.9z"/>
+                            <path fill="#fff" opacity="0.8" d="M10.4 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7-5.4A23.9 23.9 0 0 0 .5 24c0 3.9.9 7.5 2.6 10.7l7.3-6.1z"/>
+                            <path fill="#fff" d="M24 47c5.4 0 10-1.8 13.3-4.8l-7.4-5.7c-1.8 1.2-4.1 2-6.9 2-5.4 0-10-3.6-11.7-8.6l-7.3 6.1C6.8 41.3 14.8 47 24 47z"/>
+                          </svg>
+                          Google
+                        </button>
+                        <button onClick={signInWithLINE}
+                          className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl"
+                          style={{ background: "#06C755" }}>
+                          LINE
+                        </button>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  user ? (
                     <button onClick={() => setShowRegister(true)}
                       className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
                       style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)" }}>
                       Join Waitlist
                     </button>
-                  )}
+                  ) : (
+                    <div className="text-center bg-gray-50 rounded-2xl p-4">
+                      <p className="text-sm text-gray-500 mb-3">Sign in to join the waitlist</p>
+                      <div className="flex gap-2 justify-center">
+                        <button onClick={signInWithGoogle}
+                          className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl"
+                          style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+                          Google
+                        </button>
+                        <button onClick={signInWithLINE}
+                          className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl"
+                          style={{ background: "#06C755" }}>
+                          LINE
+                        </button>
+                      </div>
+                    </div>
+                  )
+                )}
                 </div>
               </div>
             </div>
@@ -964,10 +1021,11 @@ export default function App() {
 
   async function handleSaveGame(data) {
     const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || null;
+    const avatarUrl = user?.user_metadata?.avatar_url || null;
     if (gameForm?.id) {
       await updateGame(gameForm.id, data, token);
     } else {
-      await createGame({ ...data, createdBy: user?.email || null, createdByName: displayName }, token);
+      await createGame({ ...data, createdBy: user?.email || null, createdByName: displayName, createdByAvatar: avatarUrl }, token);
     }
     await loadGames();
   }
