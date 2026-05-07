@@ -323,7 +323,7 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove }) {
 function RegisterModal({ game, onRegister, onClose, user }) {
   const isFull = game.players.length >= game.maxPlayers;
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "";
-  const avatarUrl = user?.user_metadata?.avatar_url || null;
+  const avatarUrl = user?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null;
   const [duprRating, setDuprRating] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -1020,8 +1020,8 @@ export default function App() {
   }
 
   async function handleSaveGame(data) {
-    const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || null;
-    const avatarUrl = user?.user_metadata?.avatar_url || null;
+    const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || sessionStorage.getItem("line_display_name") || user?.email || null;
+    const avatarUrl = user?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null;
     if (gameForm?.id) {
       await updateGame(gameForm.id, data, token);
     } else {
