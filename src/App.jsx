@@ -67,8 +67,12 @@ async function fetchGames(token) {
     ...g,
     maxPlayers: g.max_players,
     endTime: g.end_time,
+    createdByName: g.created_by_name || g.created_by || "Unknown",
     players: registrations
-      .filter((r) => r.game_id === g.id)
+      .filter((r) => r.game_id === g.id && !r.is_waitlist)
+      .map((r) => ({ name: r.name, duprRating: r.dupr_rating })),
+    waitlist: registrations
+      .filter((r) => r.game_id === g.id && r.is_waitlist)
       .map((r) => ({ name: r.name, duprRating: r.dupr_rating })),
   }));
 }
@@ -81,6 +85,7 @@ async function createGame(data, token) {
       end_time: data.endTime || null, location: data.location,
       location_url: data.locationUrl || null, max_players: data.maxPlayers,
       price: data.price, created_by: data.createdBy || null,
+      created_by_name: data.createdByName || null,
     }),
   }, token);
 }
@@ -102,10 +107,14 @@ async function deleteGame(gameId, token) {
   await sbFetch(`games?id=eq.${gameId}`, { method: "DELETE" }, token);
 }
 
-async function createRegistration(gameId, player) {
+async function createRegistration(gameId, player, isWaitlist = false) {
   return sbFetch("registrations", {
     method: "POST", prefer: "return=representation",
-    body: JSON.stringify({ game_id: gameId, name: player.name, dupr_rating: player.duprRating || null }),
+    body: JSON.stringify({
+      game_id: gameId, name: player.name,
+      dupr_rating: player.duprRating || null,
+      is_waitlist: isWaitlist,
+    }),
   });
 }
 
@@ -117,7 +126,6 @@ function ratingColor(r) {
   return "text-amber-500";
 }
 
-// Display time as 24hr e.g. "18:30"
 function displayTime(t) {
   if (!t) return "";
   return t.slice(0, 5);
@@ -139,7 +147,27 @@ function SpotsBar({ filled, max }) {
   );
 }
 
+function PlayerRow({ player, index, isWaitlist }) {
+  return (
+    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+      <div className="flex items-center gap-2.5">
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold ${isWaitlist ? "bg-amber-400" : "bg-gradient-to-br from-blue-400 to-blue-600"}`}>
+          {isWaitlist ? index + 1 : player.name.charAt(0).toUpperCase()}
+        </div>
+        <span className="text-sm font-medium text-gray-700">{player.name}</span>
+        {isWaitlist && <span className="text-xs text-amber-500 font-semibold">Waitlist #{index + 1}</span>}
+      </div>
+      {player.duprRating != null && (
+        <span className={`text-xs font-bold ${ratingColor(player.duprRating)}`}>
+          DUPR {Number(player.duprRating).toFixed(2)}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function RegisterModal({ game, onRegister, onClose }) {
+  const isFull = game.players.length >= game.maxPlayers;
   const [name, setName] = useState("");
   const [duprRating, setDuprRating] = useState("");
   const [loading, setLoading] = useState(false);
@@ -155,7 +183,7 @@ function RegisterModal({ game, onRegister, onClose }) {
     setLoading(true);
     setError("");
     try {
-      await onRegister(game.id, { name: name.trim(), duprRating: rating });
+      await onRegister(game.id, { name: name.trim(), duprRating: rating }, isFull);
       onClose();
     } catch { setError("Something went wrong. Please try again."); }
     setLoading(false);
@@ -166,11 +194,20 @@ function RegisterModal({ game, onRegister, onClose }) {
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6">
         <div className="flex justify-between items-start mb-1">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Join Game</h2>
+            <h2 className="text-base font-bold text-gray-900">
+              {isFull ? "Join Waitlist" : "Join Game"}
+            </h2>
             <p className="text-xs text-gray-400 mt-0.5">{game.title}</p>
           </div>
           <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-xl leading-none mt-0.5">✕</button>
         </div>
+
+        {isFull && (
+          <div className="mt-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 text-xs text-amber-600">
+            This game is full. You'll be added to the waitlist and notified if a spot opens up.
+          </div>
+        )}
+
         <div className="mt-4 flex flex-col gap-3">
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Your Name</label>
@@ -194,8 +231,8 @@ function RegisterModal({ game, onRegister, onClose }) {
           {error && <p className="text-xs text-red-500">{error}</p>}
           <button onClick={handleSubmit} disabled={loading}
             className="mt-1 w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-            {loading ? "Joining..." : "Confirm Registration"}
+            style={{ background: isFull ? "linear-gradient(135deg, #d97706, #f59e0b)" : "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+            {loading ? "Saving..." : isFull ? "Join Waitlist" : "Confirm Registration"}
           </button>
         </div>
       </div>
@@ -203,7 +240,6 @@ function RegisterModal({ game, onRegister, onClose }) {
   );
 }
 
-// Full game detail modal
 function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, onEdit }) {
   const [showRegister, setShowRegister] = useState(false);
   const isFull = game.players.length >= game.maxPlayers;
@@ -222,17 +258,18 @@ function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, o
     onClose();
   }
 
-  async function handleRegisterAndRefresh(gameId, player) {
-    await onRegister(gameId, player);
+  async function handleRegisterAndRefresh(gameId, player, isWaitlist) {
+    await onRegister(gameId, player, isWaitlist);
     setShowRegister(false);
   }
 
   return (
     <>
-      {showRegister && <RegisterModal game={game} onRegister={handleRegisterAndRefresh} onClose={() => setShowRegister(false)} />}
+      {showRegister && (
+        <RegisterModal game={game} onRegister={handleRegisterAndRefresh} onClose={() => setShowRegister(false)} />
+      )}
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-40 p-4">
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-          {/* Color accent */}
           <div className="h-2 rounded-t-3xl" style={{ background: isFull ? "#f87171" : spotsLeft <= 2 ? "#fbbf24" : "#4ade80" }} />
 
           <div className="p-6">
@@ -240,7 +277,9 @@ function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, o
             <div className="flex items-start justify-between gap-3 mb-4">
               <div className="flex-1">
                 <h2 className="text-xl font-black text-gray-900 leading-tight">{game.title}</h2>
-                {game.created_by && <p className="text-xs text-gray-300 mt-0.5">Created by {game.created_by}</p>}
+                {game.createdByName && (
+                  <p className="text-xs text-gray-400 mt-0.5">Hosted by {game.createdByName}</p>
+                )}
               </div>
               <div className="flex items-center gap-1.5">
                 {canEdit && (
@@ -251,47 +290,51 @@ function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, o
                   <button onClick={handleDelete}
                     className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 hover:bg-red-100 text-red-400 transition-colors">🗑</button>
                 )}
-                <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 text-lg">✕</button>
+                <button onClick={onClose}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 text-lg">✕</button>
               </div>
             </div>
 
             {/* Details */}
             <div className="bg-gray-50 rounded-2xl p-4 flex flex-col gap-2.5 mb-4">
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-base">📅</span>
+                <span>📅</span>
                 <span>{new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-base">⏰</span>
+                <span>⏰</span>
                 <span>{displayTime(game.time)}{game.endTime ? ` – ${displayTime(game.endTime)}` : ""}</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-base">📍</span>
+                <span>📍</span>
                 {game.location_url
                   ? <a href={game.location_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{game.location}</a>
                   : <span>{game.location}</span>
                 }
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-base">{game.price > 0 ? "💵" : "🆓"}</span>
+                <span>{game.price > 0 ? "💵" : "🆓"}</span>
                 <span>{game.price > 0 ? `$${Number(game.price).toFixed(2)} per player` : "Free"}</span>
               </div>
             </div>
 
-            {/* Spots bar */}
+            {/* Spots */}
             <div className="mb-4">
               <SpotsBar filled={game.players.length} max={game.maxPlayers} />
             </div>
-
-            {/* Status badge */}
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-5">
               <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${statusColor}`}>
                 {isFull ? "Game is Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} remaining`}
               </span>
+              {game.waitlist.length > 0 && (
+                <span className="text-xs font-semibold px-3 py-1.5 rounded-full border bg-amber-50 text-amber-600 border-amber-100">
+                  {game.waitlist.length} on waitlist
+                </span>
+              )}
             </div>
 
-            {/* Players list */}
-            <div className="mb-5">
+            {/* Players */}
+            <div className="mb-4">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
                 Registered Players ({game.players.length})
               </h3>
@@ -299,26 +342,24 @@ function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, o
                 <p className="text-sm text-gray-300 text-center py-4">No one has registered yet. Be the first!</p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {game.players.map((p, i) => (
-                    <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                          {p.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-sm font-medium text-gray-700">{p.name}</span>
-                      </div>
-                      {p.duprRating != null && (
-                        <span className={`text-xs font-bold ${ratingColor(p.duprRating)}`}>
-                          DUPR {Number(p.duprRating).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                  {game.players.map((p, i) => <PlayerRow key={i} player={p} index={i} isWaitlist={false} />)}
                 </div>
               )}
             </div>
 
-            {/* Register button */}
+            {/* Waitlist */}
+            {game.waitlist.length > 0 && (
+              <div className="mb-5">
+                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-3">
+                  Waitlist ({game.waitlist.length})
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {game.waitlist.map((p, i) => <PlayerRow key={i} player={p} index={i} isWaitlist={true} />)}
+                </div>
+              </div>
+            )}
+
+            {/* Action button */}
             {!isFull ? (
               <button onClick={() => setShowRegister(true)}
                 className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 active:scale-95 transition-all"
@@ -326,9 +367,11 @@ function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, o
                 + Register for this Game
               </button>
             ) : (
-              <div className="w-full py-3 rounded-xl text-sm font-semibold text-red-400 bg-red-50 text-center">
-                This game is full
-              </div>
+              <button onClick={() => setShowRegister(true)}
+                className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 active:scale-95 transition-all"
+                style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)" }}>
+                Join Waitlist
+              </button>
             )}
           </div>
         </div>
@@ -361,9 +404,14 @@ function GameCard({ game, onClick }) {
               : <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
             }
           </div>
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex-shrink-0 ${statusColor}`}>
-            {isFull ? "Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`}
-          </span>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
+              {isFull ? "Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`}
+            </span>
+            {isFull && game.waitlist.length > 0 && (
+              <span className="text-xs text-amber-500 font-semibold">{game.waitlist.length} on waitlist</span>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-4">
@@ -376,7 +424,6 @@ function GameCard({ game, onClick }) {
         </div>
 
         <SpotsBar filled={game.players.length} max={game.maxPlayers} />
-
         <p className="text-xs text-gray-300 mt-3 text-right">Tap to see details & register →</p>
       </div>
     </div>
@@ -621,7 +668,6 @@ export default function App() {
     try {
       const data = await fetchGames(t);
       setGames(data);
-      // refresh selected game if open
       if (selectedGame) {
         const updated = data.find(g => g.id === selectedGame.id);
         if (updated) setSelectedGame(updated);
@@ -638,16 +684,17 @@ export default function App() {
     setUser(null); setToken(null); setIsAdmin(false);
   }
 
-  async function handleRegister(gameId, player) {
-    await createRegistration(gameId, player);
+  async function handleRegister(gameId, player, isWaitlist = false) {
+    await createRegistration(gameId, player, isWaitlist);
     await loadGames();
   }
 
   async function handleSaveGame(data) {
+    const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || null;
     if (gameForm?.id) {
       await updateGame(gameForm.id, data, token);
     } else {
-      await createGame({ ...data, createdBy: user?.email || null }, token);
+      await createGame({ ...data, createdBy: user?.email || null, createdByName: displayName }, token);
     }
     await loadGames();
   }
