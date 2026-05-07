@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 const SUPABASE_URL = "https://mjucamqnmdjcnkbgkise.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qdWNhbXFubWRqY25rYmdraXNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMzUzMDQsImV4cCI6MjA5MzcxMTMwNH0.lx_Yu6bdNEiDZ70E4QDMZlLPodC1y1jrrUkqU24mDTI";
 const ADMIN_PASSWORD = "Ben150893@PickleballTaichung";
+const GUEST_TOKENS_KEY = "pb_guest_tokens"; // localStorage key
 
 function authHeaders(token) {
   return {
@@ -60,20 +61,52 @@ async function getUser(token) {
   } catch { return null; }
 }
 
+// Guest token helpers
+function getGuestTokens() {
+  try { return JSON.parse(localStorage.getItem(GUEST_TOKENS_KEY) || "{}"); }
+  catch { return {}; }
+}
+
+function saveGuestToken(registrationId, token) {
+  const tokens = getGuestTokens();
+  tokens[registrationId] = token;
+  localStorage.setItem(GUEST_TOKENS_KEY, JSON.stringify(tokens));
+}
+
+function generateToken() {
+  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+}
+
+function getMyToken(registrationId) {
+  return getGuestTokens()[registrationId] || null;
+}
+
 async function fetchGames(token) {
   const games = await sbFetch("games?select=*&order=date.asc,time.asc", {}, token);
   const registrations = await sbFetch("registrations?select=*", {}, token);
+  const myTokens = getGuestTokens();
   return games.map((g) => ({
     ...g,
     maxPlayers: g.max_players,
     endTime: g.end_time,
-    createdByName: g.created_by_name || g.created_by || "Unknown",
+    courts: g.courts || 1,
+    createdByName: g.created_by_name || g.created_by || null,
     players: registrations
       .filter((r) => r.game_id === g.id && !r.is_waitlist)
-      .map((r) => ({ name: r.name, duprRating: r.dupr_rating })),
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        duprRating: r.dupr_rating,
+        canLeave: !!myTokens[r.id] && myTokens[r.id] === r.guest_token,
+      })),
     waitlist: registrations
       .filter((r) => r.game_id === g.id && r.is_waitlist)
-      .map((r) => ({ name: r.name, duprRating: r.dupr_rating })),
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        duprRating: r.dupr_rating,
+        canLeave: !!myTokens[r.id] && myTokens[r.id] === r.guest_token,
+      })),
   }));
 }
 
@@ -84,8 +117,8 @@ async function createGame(data, token) {
       title: data.title, date: data.date, time: data.time,
       end_time: data.endTime || null, location: data.location,
       location_url: data.locationUrl || null, max_players: data.maxPlayers,
-      price: data.price, created_by: data.createdBy || null,
-      created_by_name: data.createdByName || null,
+      price: data.price, courts: data.courts || 1,
+      created_by: data.createdBy || null, created_by_name: data.createdByName || null,
     }),
   }, token);
 }
@@ -97,7 +130,7 @@ async function updateGame(gameId, data, token) {
       title: data.title, date: data.date, time: data.time,
       end_time: data.endTime || null, location: data.location,
       location_url: data.locationUrl || null, max_players: data.maxPlayers,
-      price: data.price,
+      price: data.price, courts: data.courts || 1,
     }),
   }, token);
 }
@@ -108,14 +141,24 @@ async function deleteGame(gameId, token) {
 }
 
 async function createRegistration(gameId, player, isWaitlist = false) {
-  return sbFetch("registrations", {
+  const guestToken = generateToken();
+  const result = await sbFetch("registrations", {
     method: "POST", prefer: "return=representation",
     body: JSON.stringify({
       game_id: gameId, name: player.name,
       dupr_rating: player.duprRating || null,
       is_waitlist: isWaitlist,
+      guest_token: guestToken,
     }),
   });
+  if (result && result[0]) {
+    saveGuestToken(result[0].id, guestToken);
+  }
+  return result;
+}
+
+async function deleteRegistration(registrationId) {
+  return sbFetch(`registrations?id=eq.${registrationId}`, { method: "DELETE" });
 }
 
 function ratingColor(r) {
@@ -147,21 +190,40 @@ function SpotsBar({ filled, max }) {
   );
 }
 
-function PlayerRow({ player, index, isWaitlist }) {
+function PlayerRow({ player, index, isWaitlist, isAdmin, onRemove }) {
+  const [leaving, setLeaving] = useState(false);
+
+  async function handleLeave() {
+    if (!window.confirm(`Remove "${player.name}" from this game?`)) return;
+    setLeaving(true);
+    await onRemove(player.id);
+  }
+
   return (
     <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
       <div className="flex items-center gap-2.5">
         <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold ${isWaitlist ? "bg-amber-400" : "bg-gradient-to-br from-blue-400 to-blue-600"}`}>
           {isWaitlist ? index + 1 : player.name.charAt(0).toUpperCase()}
         </div>
-        <span className="text-sm font-medium text-gray-700">{player.name}</span>
-        {isWaitlist && <span className="text-xs text-amber-500 font-semibold">Waitlist #{index + 1}</span>}
+        <div>
+          <span className="text-sm font-medium text-gray-700">{player.name}</span>
+          {isWaitlist && <span className="text-xs text-amber-500 font-semibold ml-2">#{index + 1} on waitlist</span>}
+        </div>
       </div>
-      {player.duprRating != null && (
-        <span className={`text-xs font-bold ${ratingColor(player.duprRating)}`}>
-          DUPR {Number(player.duprRating).toFixed(2)}
-        </span>
-      )}
+      <div className="flex items-center gap-2">
+        {player.duprRating != null && (
+          <span className={`text-xs font-bold ${ratingColor(player.duprRating)}`}>
+            DUPR {Number(player.duprRating).toFixed(2)}
+          </span>
+        )}
+        {(player.canLeave || isAdmin) && (
+          <button onClick={handleLeave} disabled={leaving}
+            className="text-xs text-red-400 hover:text-red-600 font-semibold px-2 py-1 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+            title={player.canLeave ? "Leave game" : "Remove player"}>
+            {leaving ? "..." : player.canLeave ? "Leave" : "✕"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -194,20 +256,16 @@ function RegisterModal({ game, onRegister, onClose }) {
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6">
         <div className="flex justify-between items-start mb-1">
           <div>
-            <h2 className="text-base font-bold text-gray-900">
-              {isFull ? "Join Waitlist" : "Join Game"}
-            </h2>
+            <h2 className="text-base font-bold text-gray-900">{isFull ? "Join Waitlist" : "Join Game"}</h2>
             <p className="text-xs text-gray-400 mt-0.5">{game.title}</p>
           </div>
           <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-xl leading-none mt-0.5">✕</button>
         </div>
-
         {isFull && (
           <div className="mt-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 text-xs text-amber-600">
-            This game is full. You'll be added to the waitlist and notified if a spot opens up.
+            This game is full. You'll be added to the waitlist.
           </div>
         )}
-
         <div className="mt-4 flex flex-col gap-3">
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Your Name</label>
@@ -240,13 +298,12 @@ function RegisterModal({ game, onRegister, onClose }) {
   );
 }
 
-function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, onEdit }) {
+function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAdmin, onDelete, onEdit }) {
   const [showRegister, setShowRegister] = useState(false);
   const isFull = game.players.length >= game.maxPlayers;
   const spotsLeft = game.maxPlayers - game.players.length;
   const isOwner = user && game.created_by === user.email;
   const canEdit = isOwner || isAdmin;
-  const canDelete = isAdmin;
 
   const statusColor = isFull ? "bg-red-50 text-red-500 border-red-100"
     : spotsLeft <= 2 ? "bg-amber-50 text-amber-600 border-amber-100"
@@ -258,35 +315,29 @@ function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, o
     onClose();
   }
 
-  async function handleRegisterAndRefresh(gameId, player, isWaitlist) {
-    await onRegister(gameId, player, isWaitlist);
-    setShowRegister(false);
-  }
-
   return (
     <>
       {showRegister && (
-        <RegisterModal game={game} onRegister={handleRegisterAndRefresh} onClose={() => setShowRegister(false)} />
+        <RegisterModal game={game} onRegister={async (gid, player, isWaitlist) => {
+          await onRegister(gid, player, isWaitlist);
+          setShowRegister(false);
+        }} onClose={() => setShowRegister(false)} />
       )}
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-40 p-4">
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
           <div className="h-2 rounded-t-3xl" style={{ background: isFull ? "#f87171" : spotsLeft <= 2 ? "#fbbf24" : "#4ade80" }} />
-
           <div className="p-6">
-            {/* Header */}
             <div className="flex items-start justify-between gap-3 mb-4">
               <div className="flex-1">
                 <h2 className="text-xl font-black text-gray-900 leading-tight">{game.title}</h2>
-                {game.createdByName && (
-                  <p className="text-xs text-gray-400 mt-0.5">Hosted by {game.createdByName}</p>
-                )}
+                {game.createdByName && <p className="text-xs text-gray-400 mt-0.5">Hosted by {game.createdByName}</p>}
               </div>
               <div className="flex items-center gap-1.5">
                 {canEdit && (
                   <button onClick={() => { onEdit(game); onClose(); }}
                     className="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-400 transition-colors">✏️</button>
                 )}
-                {canDelete && (
+                {isAdmin && (
                   <button onClick={handleDelete}
                     className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 hover:bg-red-100 text-red-400 transition-colors">🗑</button>
                 )}
@@ -295,7 +346,6 @@ function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, o
               </div>
             </div>
 
-            {/* Details */}
             <div className="bg-gray-50 rounded-2xl p-4 flex flex-col gap-2.5 mb-4">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>📅</span>
@@ -309,8 +359,11 @@ function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, o
                 <span>📍</span>
                 {game.location_url
                   ? <a href={game.location_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{game.location}</a>
-                  : <span>{game.location}</span>
-                }
+                  : <span>{game.location}</span>}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span>🏟</span>
+                <span>{game.courts} court{game.courts !== 1 ? "s" : ""}</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>{game.price > 0 ? "💵" : "🆓"}</span>
@@ -318,7 +371,6 @@ function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, o
               </div>
             </div>
 
-            {/* Spots */}
             <div className="mb-4">
               <SpotsBar filled={game.players.length} max={game.maxPlayers} />
             </div>
@@ -333,42 +385,45 @@ function GameDetailModal({ game, onRegister, onClose, user, isAdmin, onDelete, o
               )}
             </div>
 
-            {/* Players */}
             <div className="mb-4">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
                 Registered Players ({game.players.length})
               </h3>
               {game.players.length === 0 ? (
-                <p className="text-sm text-gray-300 text-center py-4">No one has registered yet. Be the first!</p>
+                <p className="text-sm text-gray-300 text-center py-4">No one registered yet. Be the first!</p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {game.players.map((p, i) => <PlayerRow key={i} player={p} index={i} isWaitlist={false} />)}
+                  {game.players.map((p, i) => (
+                    <PlayerRow key={p.id} player={p} index={i} isWaitlist={false} isAdmin={isAdmin}
+                      onRemove={onRemovePlayer} />
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Waitlist */}
             {game.waitlist.length > 0 && (
               <div className="mb-5">
                 <h3 className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-3">
                   Waitlist ({game.waitlist.length})
                 </h3>
                 <div className="flex flex-col gap-2">
-                  {game.waitlist.map((p, i) => <PlayerRow key={i} player={p} index={i} isWaitlist={true} />)}
+                  {game.waitlist.map((p, i) => (
+                    <PlayerRow key={p.id} player={p} index={i} isWaitlist={true} isAdmin={isAdmin}
+                      onRemove={onRemovePlayer} />
+                  ))}
                 </div>
               </div>
             )}
 
-            {/* Action button */}
             {!isFull ? (
               <button onClick={() => setShowRegister(true)}
-                className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 active:scale-95 transition-all"
+                className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
                 style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
                 + Register for this Game
               </button>
             ) : (
               <button onClick={() => setShowRegister(true)}
-                className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 active:scale-95 transition-all"
+                className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
                 style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)" }}>
                 Join Waitlist
               </button>
@@ -417,6 +472,7 @@ function GameCard({ game, onClick }) {
         <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-4">
           <span>📅 {new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
           <span>⏰ {displayTime(game.time)}{game.endTime ? ` – ${displayTime(game.endTime)}` : ""}</span>
+          <span>🏟 {game.courts} court{game.courts !== 1 ? "s" : ""}</span>
           {game.price > 0
             ? <span className="text-emerald-600 font-semibold">💵 ${Number(game.price).toFixed(2)}/player</span>
             : <span className="text-emerald-500 font-semibold">🆓 Free</span>
@@ -440,6 +496,7 @@ function GameFormModal({ game, onClose, onSave }) {
     location: game?.location || "",
     locationUrl: game?.location_url || "",
     maxPlayers: game?.maxPlayers || 8,
+    courts: game?.courts || 1,
     price: game?.price ?? "",
   });
   const [loading, setLoading] = useState(false);
@@ -454,7 +511,7 @@ function GameFormModal({ game, onClose, onSave }) {
     }
     setLoading(true);
     try {
-      await onSave({ ...form, maxPlayers: Number(form.maxPlayers), price: form.price ? Number(form.price) : 0 });
+      await onSave({ ...form, maxPlayers: Number(form.maxPlayers), courts: Number(form.courts), price: form.price ? Number(form.price) : 0 });
       onClose();
     } catch { setError("Something went wrong. Please try again."); }
     setLoading(false);
@@ -509,18 +566,24 @@ function GameFormModal({ game, onClose, onSave }) {
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Max Players</label>
-              <input type="number" min={2} max={32} value={form.maxPlayers}
+              <input type="number" min={2} max={64} value={form.maxPlayers}
                 onChange={(e) => update("maxPlayers", e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
             </div>
             <div className="flex-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Price / Player ($)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                <input type="number" min={0} step={0.5} placeholder="0.00" value={form.price}
-                  onChange={(e) => update("price", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl pl-6 pr-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-              </div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Courts</label>
+              <input type="number" min={1} max={20} value={form.courts}
+                onChange={(e) => update("courts", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Price / Player ($)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+              <input type="number" min={0} step={0.5} placeholder="0.00" value={form.price}
+                onChange={(e) => update("price", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl pl-6 pr-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
             </div>
           </div>
         </div>
@@ -689,6 +752,11 @@ export default function App() {
     await loadGames();
   }
 
+  async function handleRemovePlayer(registrationId) {
+    await deleteRegistration(registrationId);
+    await loadGames();
+  }
+
   async function handleSaveGame(data) {
     const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || null;
     if (gameForm?.id) {
@@ -720,6 +788,7 @@ export default function App() {
           game={selectedGame}
           onClose={() => setSelectedGame(null)}
           onRegister={handleRegister}
+          onRemovePlayer={handleRemovePlayer}
           user={user}
           isAdmin={isAdmin}
           onDelete={handleDelete}
