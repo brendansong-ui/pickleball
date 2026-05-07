@@ -56,11 +56,9 @@ async function getSession() {
   // Handle LINE callback
   const urlParams = new URLSearchParams(window.location.search);
   const lineCode = urlParams.get("code");
-  const lineState = urlParams.get("state");
-  if (lineCode && lineState && lineState === sessionStorage.getItem("line_state")) {
+  if (lineCode) {
     sessionStorage.removeItem("line_state");
     window.history.replaceState(null, "", window.location.pathname);
-    // Exchange code for token via our edge function proxy
     try {
       const res = await fetch("https://mjucamqnmdjcnkbgkise.supabase.co/functions/v1/line-auth", {
         method: "POST",
@@ -74,6 +72,9 @@ async function getSession() {
           if (data.refresh_token) sessionStorage.setItem("sb_refresh", data.refresh_token);
           return data.access_token;
         }
+      } else {
+        const err = await res.text();
+        console.error("LINE edge function error:", err);
       }
     } catch (e) { console.error("LINE auth error", e); }
   }
