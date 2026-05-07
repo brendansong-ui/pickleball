@@ -464,7 +464,15 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="flex-1">
-                    <h2 className="text-xl font-black text-gray-900 leading-tight">{game.title}</h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-black text-gray-900 leading-tight">{game.title}</h2>
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        const text = `🏓 ${game.title}\n📍 ${game.location}\n📅 ${new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(game.time)}${game.endTime ? `–${displayTime(game.endTime)}` : ""}\n${game.price > 0 ? `NT$${Number(game.price).toFixed(0)}/player` : "Free"}\n\nJoin here: ${window.location.href}`;
+                        if (navigator.share) { navigator.share({ title: "Pickleball Taichung", text }); }
+                        else { navigator.clipboard.writeText(text); alert("Game details copied!"); }
+                      }} className="text-gray-300 hover:text-gray-500 transition-colors" title="Share">📤</button>
+                    </div>
                     {game.createdByName && <p className="text-xs text-gray-400 mt-0.5">Hosted by {game.createdByName}</p>}
                   </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -633,7 +641,14 @@ function GameCard({ game, onClick }) {
       <div className="p-4">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 text-base leading-tight">{game.title}</h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-bold text-gray-900 text-base leading-tight">{game.title}</h3>
+              <button onClick={handleShare}
+                className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0"
+                title="Share">
+                📤
+              </button>
+            </div>
             <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
             {game.createdByName && (
               <p className="text-xs text-gray-400 mt-0.5">🏅 Host: {game.createdByName}</p>
@@ -668,14 +683,6 @@ function GameCard({ game, onClick }) {
         </div>
 
         <SpotsBar filled={game.players.length} max={game.maxPlayers} />
-
-        <div className="flex items-center justify-between mt-2">
-          <p className="text-xs text-gray-300">Tap to register →</p>
-          <button onClick={handleShare}
-            className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors">
-            ↗ Share
-          </button>
-        </div>
       </div>
     </div>
   );
