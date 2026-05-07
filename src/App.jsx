@@ -74,11 +74,9 @@ async function getSession() {
         if (data.access_token) {
           sessionStorage.setItem("sb_token", data.access_token);
           if (data.refresh_token) sessionStorage.setItem("sb_refresh", data.refresh_token);
+          if (data.display_name) sessionStorage.setItem("line_display_name", data.display_name);
+          if (data.avatar_url) sessionStorage.setItem("line_avatar_url", data.avatar_url);
           return data.access_token;
-        } else if (data.magic_link) {
-          // Redirect to magic link to complete sign in
-          window.location.href = data.magic_link;
-          return null;
         }
       } else {
         const err = await res.text();
@@ -108,7 +106,14 @@ async function getUser(token) {
   try {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: authHeaders(token) });
     if (!res.ok) return null;
-    return await res.json();
+    const user = await res.json();
+    // Supplement with LINE profile data if available
+    const lineName = sessionStorage.getItem("line_display_name");
+    const lineAvatar = sessionStorage.getItem("line_avatar_url");
+    if (lineName && !user.user_metadata?.full_name) {
+      user.user_metadata = { ...user.user_metadata, full_name: lineName, avatar_url: lineAvatar };
+    }
+    return user;
   } catch { return null; }
 }
 
