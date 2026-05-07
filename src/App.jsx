@@ -560,25 +560,15 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                     </button>
                   ) : (
                     <div className="text-center bg-gray-50 rounded-2xl p-4">
-                      <p className="text-sm text-gray-500 mb-3">Sign in to register for this game</p>
-                      <div className="flex gap-2 justify-center">
-                        <button onClick={signInWithGoogle}
-                          className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl"
-                          style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-                          <svg width="13" height="13" viewBox="0 0 48 48">
-                            <path fill="#fff" opacity="0.9" d="M24 9.5c3.2 0 5.9 1.1 8.1 2.9l6-6C34.5 3.1 29.6 1 24 1 14.8 1 6.9 6.6 3.4 14.6l7 5.4C12.1 13.4 17.6 9.5 24 9.5z"/>
-                            <path fill="#fff" opacity="0.7" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-16.9z"/>
-                            <path fill="#fff" opacity="0.8" d="M10.4 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7-5.4A23.9 23.9 0 0 0 .5 24c0 3.9.9 7.5 2.6 10.7l7.3-6.1z"/>
-                            <path fill="#fff" d="M24 47c5.4 0 10-1.8 13.3-4.8l-7.4-5.7c-1.8 1.2-4.1 2-6.9 2-5.4 0-10-3.6-11.7-8.6l-7.3 6.1C6.8 41.3 14.8 47 24 47z"/>
-                          </svg>
-                          Google
-                        </button>
-                        <button onClick={signInWithLINE}
-                          className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl"
-                          style={{ background: "#06C755" }}>
-                          LINE
-                        </button>
-                      </div>
+                      <p className="text-sm text-gray-500 mb-3">Sign in with LINE to register</p>
+                      <button onClick={signInWithLINE}
+                        className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl mx-auto"
+                        style={{ background: "#06C755" }}>
+                        <svg width="13" height="13" viewBox="0 0 48 48" fill="white">
+                          <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4zm-6.5 22.5h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm3 0a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v8a1 1 0 0 1-1 1zm9 0h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm5-3.5h-3v-1.5h3a1 1 0 0 1 0 2zm0-3h-3V18.5h3a1 1 0 0 1 0 2z"/>
+                        </svg>
+                        Sign in with LINE
+                      </button>
                     </div>
                   )
                 ) : (
@@ -590,19 +580,15 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                     </button>
                   ) : (
                     <div className="text-center bg-gray-50 rounded-2xl p-4">
-                      <p className="text-sm text-gray-500 mb-3">Sign in to join the waitlist</p>
-                      <div className="flex gap-2 justify-center">
-                        <button onClick={signInWithGoogle}
-                          className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl"
-                          style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-                          Google
-                        </button>
-                        <button onClick={signInWithLINE}
-                          className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl"
-                          style={{ background: "#06C755" }}>
-                          LINE
-                        </button>
-                      </div>
+                      <p className="text-sm text-gray-500 mb-3">Sign in with LINE to join the waitlist</p>
+                      <button onClick={signInWithLINE}
+                        className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl mx-auto"
+                        style={{ background: "#06C755" }}>
+                        <svg width="13" height="13" viewBox="0 0 48 48" fill="white">
+                          <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4zm-6.5 22.5h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm3 0a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v8a1 1 0 0 1-1 1zm9 0h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm5-3.5h-3v-1.5h3a1 1 0 0 1 0 2zm0-3h-3V18.5h3a1 1 0 0 1 0 2z"/>
+                        </svg>
+                        Sign in with LINE
+                      </button>
                     </div>
                   )
                 )}
@@ -1004,14 +990,6 @@ export default function App() {
     setLoading(false);
   }
 
-  async function handleSignIn() { await signInWithGoogle(); }
-  async function handleSignOut() {
-    await signOut(token);
-    sessionStorage.removeItem("sb_token");
-    sessionStorage.removeItem("sb_refresh");
-    setUser(null); setToken(null); setIsAdmin(false);
-  }
-
   async function handleRegister(gameId, player, isWaitlist = false) {
     await createRegistration(gameId, player, isWaitlist);
     await loadGames();
@@ -1075,9 +1053,10 @@ export default function App() {
             {user ? (
               <>
                 {isAdmin && <span className="text-xs text-emerald-500 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full">Admin</span>}
-                <img src={user.user_metadata?.avatar_url} className="w-7 h-7 rounded-full" alt=""
-                  onError={(e) => e.target.style.display="none"} />
-                <button onClick={handleSignOut} className="text-xs text-gray-400 hover:text-gray-600">Sign out</button>
+                {user.user_metadata?.avatar_url && (
+                  <img src={user.user_metadata.avatar_url} className="w-7 h-7 rounded-full" alt=""
+                    onError={(e) => e.target.style.display="none"} />
+                )}
               </>
             ) : (
               <button onClick={() => setShowAdminLogin(true)} className="text-gray-300 hover:text-gray-500 text-base px-1" title="Admin">⚙️</button>
@@ -1093,27 +1072,14 @@ export default function App() {
               + Host Game
             </button>
           ) : (
-            <>
-            <button onClick={handleSignIn}
-              className="flex items-center gap-1.5 text-white text-sm font-bold px-3 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
-              style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-              <svg width="13" height="13" viewBox="0 0 48 48">
-                <path fill="#fff" opacity="0.9" d="M24 9.5c3.2 0 5.9 1.1 8.1 2.9l6-6C34.5 3.1 29.6 1 24 1 14.8 1 6.9 6.6 3.4 14.6l7 5.4C12.1 13.4 17.6 9.5 24 9.5z"/>
-                <path fill="#fff" opacity="0.7" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-16.9z"/>
-                <path fill="#fff" opacity="0.8" d="M10.4 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7-5.4A23.9 23.9 0 0 0 .5 24c0 3.9.9 7.5 2.6 10.7l7.3-6.1z"/>
-                <path fill="#fff" d="M24 47c5.4 0 10-1.8 13.3-4.8l-7.4-5.7c-1.8 1.2-4.1 2-6.9 2-5.4 0-10-3.6-11.7-8.6l-7.3 6.1C6.8 41.3 14.8 47 24 47z"/>
-              </svg>
-              Google
-            </button>
             <button onClick={() => signInWithLINE()}
-              className="flex items-center gap-1.5 text-white text-sm font-bold px-3 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
               style={{ background: "#06C755" }}>
               <svg width="13" height="13" viewBox="0 0 48 48" fill="white">
                 <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4zm-6.5 22.5h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm3 0a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v8a1 1 0 0 1-1 1zm9 0h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm5-3.5h-3v-1.5h3a1 1 0 0 1 0 2zm0-3h-3V18.5h3a1 1 0 0 1 0 2z"/>
               </svg>
-              LINE
+              Host a Game
             </button>
-            </>
           )}
           <div className="flex gap-1 ml-auto">
             {[{ id: "list", label: "📋 List" }, { id: "calendar", label: "📅 Calendar" }].map((v) => (
