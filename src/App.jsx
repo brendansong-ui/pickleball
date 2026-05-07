@@ -24,7 +24,7 @@ async function sbFetch(path, options = {}, token = null) {
 }
 
 const LINE_CHANNEL_ID = "2010007017";
-const LINE_REDIRECT_URI = "https://pickleball-iota-one.vercel.app/line-callback";
+const LINE_REDIRECT_URI = "https://pickleball-iota-one.vercel.app";
 
 async function signInWithGoogle() {
   const res = await fetch(
