@@ -609,10 +609,22 @@ function GameCard({ game, onClick }) {
   const isFull = game.players.length >= game.maxPlayers;
   const spotsLeft = game.maxPlayers - game.players.length;
   const pct = game.players.length / game.maxPlayers;
+  const almostFull = !isFull && spotsLeft <= 2;
 
   const statusColor = isFull ? "bg-red-50 text-red-500 border-red-100"
-    : spotsLeft <= 2 ? "bg-amber-50 text-amber-600 border-amber-100"
+    : almostFull ? "bg-amber-50 text-amber-600 border-amber-100"
     : "bg-emerald-50 text-emerald-600 border-emerald-100";
+
+  function handleShare(e) {
+    e.stopPropagation();
+    const text = `🏓 ${game.title}\n📍 ${game.location}\n📅 ${new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(game.time)}${game.endTime ? `–${displayTime(game.endTime)}` : ""}\n${game.price > 0 ? `💵 NT$${Number(game.price).toFixed(0)}/player` : "🆓 Free"}\n\nJoin here: ${window.location.href}`;
+    if (navigator.share) {
+      navigator.share({ title: "Pickleball Taichung", text });
+    } else {
+      navigator.clipboard.writeText(text);
+      alert("Game details copied!");
+    }
+  }
 
   return (
     <div onClick={onClick}
@@ -628,9 +640,17 @@ function GameCard({ game, onClick }) {
             )}
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
-              {isFull ? "Full" : `${spotsLeft} left`}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {almostFull && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+              )}
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
+                {isFull ? "Full" : `${spotsLeft} left`}
+              </span>
+            </div>
             {isFull && game.waitlist.length > 0 && (
               <span className="text-xs text-amber-500 font-semibold">{game.waitlist.length} waiting</span>
             )}
@@ -648,7 +668,14 @@ function GameCard({ game, onClick }) {
         </div>
 
         <SpotsBar filled={game.players.length} max={game.maxPlayers} />
-        <p className="text-xs text-gray-300 mt-2 text-right">Tap to register →</p>
+
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-gray-300">Tap to register →</p>
+          <button onClick={handleShare}
+            className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors">
+            ↗ Share
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -956,7 +983,7 @@ export default function App() {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [gameForm, setGameForm] = useState(null);
   const [selectedGame, setSelectedGame] = useState(null);
-  const [view, setView] = useState("list");
+  const [view, setView] = useState("games");
 
   useEffect(() => {
     // Prevent pinch-to-zoom on iOS Safari
@@ -1052,7 +1079,6 @@ export default function App() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                {isAdmin && <span className="text-xs text-emerald-500 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full">Admin</span>}
                 {user.user_metadata?.avatar_url && (
                   <img src={user.user_metadata.avatar_url} className="w-7 h-7 rounded-full" alt=""
                     onError={(e) => e.target.style.display="none"} />
@@ -1082,7 +1108,7 @@ export default function App() {
             </button>
           )}
           <div className="flex gap-1 ml-auto">
-            {[{ id: "list", label: "📋 List" }, { id: "calendar", label: "📅 Calendar" }].map((v) => (
+            {[{ id: "games", label: "Games" }, { id: "about", label: "About" }].map((v) => (
               <button key={v.id} onClick={() => setView(v.id)}
                 className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${view === v.id ? "text-white" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
                 style={view === v.id ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : {}}>
@@ -1094,46 +1120,22 @@ export default function App() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-5">
-        {loading ? (
+        {isAdmin && (
+          <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 flex items-center justify-between">
+            <p className="text-xs font-semibold text-emerald-600">🛡 Admin mode — you can delete any game</p>
+            <button onClick={() => setIsAdmin(false)} className="text-xs text-emerald-400 hover:text-emerald-600 font-semibold">Exit</button>
+          </div>
+        )}        {loading ? (
           <div className="flex items-center justify-center py-24 text-gray-300 text-sm">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-400 rounded-full animate-spin" />
               Loading games...
             </div>
           </div>
-        ) : view === "list" ? (
+        ) : view === "games" ? (
           <>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
-              <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung! 🏓</h2>
-              <p className="text-sm text-gray-500 leading-relaxed mb-4">
-                This is your community spot for finding games, meeting fellow players, and getting on the court. Browse upcoming games, grab a spot, and just show up. Simple as that.
-                <br /><br />
-                To join or host a game, simply sign in with your LINE account.
-                <br /><br />
-                See you on the court!
-              </p>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">A few house rules to keep things fun for everyone</p>
-              <div className="flex flex-col gap-2.5">
-                {[
-                  "Only sign up if you're planning to come. Others are counting on a full court and your spot matters.",
-                  "Need to cancel? Please do it at least 24 hours before the game. Late cancellations mean you'll be asked to cover the session fee next time you join.",
-                  "Settle your court fees in cash with the host before the game starts. It keeps things smooth for everyone.",
-                  "Arrive 10 minutes early. Games start on time and we want everyone warmed up and ready.",
-                  "Be kind and encouraging. All levels are welcome here - cheer on the beginners and keep the vibe positive.",
-                  "No-shows without a heads-up to the host will be noted. Two strikes and your LINE account will be blacklisted!",
-                ].map((rule, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white mt-0.5"
-                      style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-                      {i + 1}
-                    </span>
-                    <p className="text-sm text-gray-500 leading-relaxed">{rule}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Upcoming Games</h2>
+            <CalendarView games={games} onGameClick={(game) => setSelectedGame(game)} />
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-6 mb-3">Upcoming Games</h2>
             {sorted.length === 0
               ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No games yet.</p></div>
               : <div className="flex flex-col gap-3">
@@ -1144,7 +1146,35 @@ export default function App() {
             }
           </>
         ) : (
-          <CalendarView games={games} onGameClick={(game) => setSelectedGame(game)} />
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung!</h2>
+            <p className="text-sm text-gray-500 leading-relaxed mb-4">
+              This is your community spot for finding games, meeting fellow players, and getting on the court. Browse upcoming games, grab a spot, and just show up. Simple as that.
+              <br /><br />
+              To join or host a game, simply sign in with your LINE account.
+              <br /><br />
+              See you on the court!
+            </p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">A few house rules to keep things fun for everyone</p>
+            <div className="flex flex-col gap-2.5">
+              {[
+                "Only sign up if you're planning to come. Others are counting on a full court and your spot matters.",
+                "Need to cancel? Please do it at least 24 hours before the game. Late cancellations mean you'll be asked to cover the session fee next time you join.",
+                "Settle your court fees in cash with the host before the game starts. It keeps things smooth for everyone.",
+                "Arrive 10 minutes early. Games start on time and we want everyone warmed up and ready.",
+                "Be kind and encouraging. All levels are welcome here - cheer on the beginners and keep the vibe positive.",
+                "No-shows without a heads-up to the host will be noted. Two strikes and your LINE account will be blacklisted!",
+              ].map((rule, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white mt-0.5"
+                    style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+                    {i + 1}
+                  </span>
+                  <p className="text-sm text-gray-500 leading-relaxed">{rule}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </main>
     </div>
