@@ -124,7 +124,7 @@ async function createGame(data, token) {
     }),
   }, token);
   // Auto-register host as first player
-  if (result && result[0] && data.createdByName) {
+  if (result && result[0] && data.createdBy) {
     const guestToken = generateToken();
     const reg = await sbFetch("registrations", {
       method: "POST", prefer: "return=representation",
@@ -321,6 +321,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
   const spotsLeft = game.maxPlayers - game.players.length;
   const isOwner = user && game.created_by === user.email;
   const canEdit = isOwner || isAdmin;
+  const canDelete = isOwner || isAdmin;
 
   const statusColor = isFull ? "bg-red-50 text-red-500 border-red-100"
     : spotsLeft <= 2 ? "bg-amber-50 text-amber-600 border-amber-100"
@@ -354,7 +355,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                   <button onClick={() => { onEdit(game); onClose(); }}
                     className="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-400 transition-colors">✏️</button>
                 )}
-                {isAdmin && (
+                {canDelete && (
                   <button onClick={handleDelete}
                     className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 hover:bg-red-100 text-red-400 transition-colors">🗑</button>
                 )}
