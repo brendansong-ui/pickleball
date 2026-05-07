@@ -471,7 +471,13 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                         const text = `🏓 ${game.title}\n📍 ${game.location}\n📅 ${new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(game.time)}${game.endTime ? `–${displayTime(game.endTime)}` : ""}\n${game.price > 0 ? `NT$${Number(game.price).toFixed(0)}/player` : "Free"}\n\nJoin here: ${window.location.href}`;
                         if (navigator.share) { navigator.share({ title: "Pickleball Taichung", text }); }
                         else { navigator.clipboard.writeText(text); alert("Game details copied!"); }
-                      }} className="text-gray-300 hover:text-gray-500 transition-colors" title="Share">📤</button>
+                      }} className="text-gray-300 hover:text-gray-500 transition-colors" title="Share">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2l-4 4h3v9h2V6h3l-4-4z"/>
+                          
+                          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                        </svg>
+                      </button>
                     </div>
                     {game.createdByName && <p className="text-xs text-gray-400 mt-0.5">Hosted by {game.createdByName}</p>}
                   </div>
@@ -646,7 +652,11 @@ function GameCard({ game, onClick }) {
               <button onClick={handleShare}
                 className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0"
                 title="Share">
-                📤
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2l-4 4h3v9h2V6h3l-4-4z"/>
+                  
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                </svg>
               </button>
             </div>
             <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
