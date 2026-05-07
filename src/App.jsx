@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 const SUPABASE_URL = "https://mjucamqnmdjcnkbgkise.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qdWNhbXFubWRqY25rYmdraXNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMzUzMDQsImV4cCI6MjA5MzcxMTMwNH0.lx_Yu6bdNEiDZ70E4QDMZlLPodC1y1jrrUkqU24mDTI";
 const ADMIN_PASSWORD = "Ben150893@PickleballTaichung";
-const GUEST_TOKENS_KEY = "pb_guest_tokens"; // localStorage key
+const GUEST_TOKENS_KEY = "pb_guest_tokens";
 
 function authHeaders(token) {
   return {
@@ -61,7 +61,6 @@ async function getUser(token) {
   } catch { return null; }
 }
 
-// Guest token helpers
 function getGuestTokens() {
   try { return JSON.parse(localStorage.getItem(GUEST_TOKENS_KEY) || "{}"); }
   catch { return {}; }
@@ -77,8 +76,12 @@ function generateToken() {
   return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
 }
 
-function getMyToken(registrationId) {
-  return getGuestTokens()[registrationId] || null;
+// Check if cancellation is allowed (must be >24hrs before game)
+function canCancelRegistration(gameDate, gameTime) {
+  const gameDateTime = new Date(`${gameDate}T${gameTime}`);
+  const now = new Date();
+  const diffHours = (gameDateTime - now) / (1000 * 60 * 60);
+  return diffHours > 24;
 }
 
 async function fetchGames(token) {
@@ -99,7 +102,7 @@ async function fetchGames(token) {
         name: r.name,
         duprRating: r.dupr_rating,
         isHost: r.is_host || false,
-        canLeave: !!myTokens[r.id] && myTokens[r.id] === r.guest_token,
+        canLeave: !!myTokens[r.id] && myTokens[r.id] === r.guest_token && !r.is_host,
       })),
     waitlist: registrations
       .filter((r) => r.game_id === g.id && r.is_waitlist)
@@ -123,13 +126,12 @@ async function createGame(data, token) {
       created_by: data.createdBy || null, created_by_name: data.createdByName || null,
     }),
   }, token);
-  // Auto-register host as first player
   if (result && result[0] && data.createdBy) {
     const guestToken = generateToken();
     const reg = await sbFetch("registrations", {
       method: "POST", prefer: "return=representation",
       body: JSON.stringify({
-        game_id: result[0].id, name: data.createdByName,
+        game_id: result[0].id, name: data.createdByName || data.createdBy,
         dupr_rating: null, is_waitlist: false,
         guest_token: guestToken, is_host: true,
       }),
@@ -163,13 +165,10 @@ async function createRegistration(gameId, player, isWaitlist = false) {
     body: JSON.stringify({
       game_id: gameId, name: player.name,
       dupr_rating: player.duprRating || null,
-      is_waitlist: isWaitlist,
-      guest_token: guestToken,
+      is_waitlist: isWaitlist, guest_token: guestToken,
     }),
   });
-  if (result && result[0]) {
-    saveGuestToken(result[0].id, guestToken);
-  }
+  if (result && result[0]) saveGuestToken(result[0].id, guestToken);
   return result;
 }
 
@@ -190,6 +189,11 @@ function displayTime(t) {
   return t.slice(0, 5);
 }
 
+// Today's date string for min date validation
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function SpotsBar({ filled, max }) {
   const pct = Math.round((filled / max) * 100);
   const color = pct >= 100 ? "bg-red-400" : pct >= 75 ? "bg-amber-400" : "bg-emerald-400";
@@ -206,38 +210,47 @@ function SpotsBar({ filled, max }) {
   );
 }
 
-function PlayerRow({ player, index, isWaitlist, isAdmin, onRemove }) {
+function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove }) {
   const [leaving, setLeaving] = useState(false);
+  const withinCutoff = !canCancelRegistration(game.date, game.time);
 
   async function handleLeave() {
+    if (withinCutoff) {
+      alert("You cannot cancel within 24 hours of the game start time.");
+      return;
+    }
     if (!window.confirm(`Remove "${player.name}" from this game?`)) return;
     setLeaving(true);
     await onRemove(player.id);
   }
 
+  const showLeaveBtn = (player.canLeave || isAdmin) && !player.isHost;
+
   return (
     <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
       <div className="flex items-center gap-2.5">
-        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold ${isWaitlist ? "bg-amber-400" : player.isHost ? "bg-gradient-to-br from-green-400 to-green-600" : "bg-gradient-to-br from-blue-400 to-blue-600"}`}>
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0
+          ${isWaitlist ? "bg-amber-400" : player.isHost ? "bg-gradient-to-br from-green-400 to-green-600" : "bg-gradient-to-br from-blue-400 to-blue-600"}`}>
           {isWaitlist ? index + 1 : player.name.charAt(0).toUpperCase()}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-medium text-gray-700">{player.name}</span>
           {player.isHost && <span className="text-xs font-bold text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full">Host</span>}
-          {isWaitlist && <span className="text-xs text-amber-500 font-semibold">#{index + 1} on waitlist</span>}
+          {isWaitlist && <span className="text-xs text-amber-500 font-semibold">#{index + 1} waitlist</span>}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {player.duprRating != null && (
           <span className={`text-xs font-bold ${ratingColor(player.duprRating)}`}>
-            DUPR {Number(player.duprRating).toFixed(2)}
+            {Number(player.duprRating).toFixed(2)}
           </span>
         )}
-        {(player.canLeave || isAdmin) && (
+        {showLeaveBtn && (
           <button onClick={handleLeave} disabled={leaving}
-            className="text-xs text-red-400 hover:text-red-600 font-semibold px-2 py-1 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
-            title={player.canLeave ? "Leave game" : "Remove player"}>
-            {leaving ? "..." : player.canLeave ? "Leave" : "✕"}
+            className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors disabled:opacity-50
+              ${withinCutoff ? "text-gray-300 cursor-not-allowed" : "text-red-400 hover:text-red-600 hover:bg-red-50"}`}
+            title={withinCutoff ? "Cannot cancel within 24hrs of game" : player.canLeave ? "Leave game" : "Remove player"}>
+            {leaving ? "..." : isAdmin && !player.canLeave ? "✕" : "Leave"}
           </button>
         )}
       </div>
@@ -315,6 +328,7 @@ function RegisterModal({ game, onRegister, onClose }) {
   );
 }
 
+// Full-screen game detail — uses native scroll, no fixed overlay clipping
 function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAdmin, onDelete, onEdit }) {
   const [showRegister, setShowRegister] = useState(false);
   const isFull = game.players.length >= game.maxPlayers;
@@ -333,6 +347,12 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
     onClose();
   }
 
+  // Prevent background scroll on iOS
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
   return (
     <>
       {showRegister && (
@@ -341,113 +361,125 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
           setShowRegister(false);
         }} onClose={() => setShowRegister(false)} />
       )}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-40 p-4">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-          <div className="h-2 rounded-t-3xl" style={{ background: isFull ? "#f87171" : spotsLeft <= 2 ? "#fbbf24" : "#4ade80" }} />
-          <div className="p-6">
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div className="flex-1">
-                <h2 className="text-xl font-black text-gray-900 leading-tight">{game.title}</h2>
-                {game.createdByName && <p className="text-xs text-gray-400 mt-0.5">Hosted by {game.createdByName}</p>}
-              </div>
-              <div className="flex items-center gap-1.5">
-                {canEdit && (
-                  <button onClick={() => { onEdit(game); onClose(); }}
-                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-400 transition-colors">✏️</button>
-                )}
-                {canDelete && (
-                  <button onClick={handleDelete}
-                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 hover:bg-red-100 text-red-400 transition-colors">🗑</button>
-                )}
-                <button onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 text-lg">✕</button>
-              </div>
-            </div>
 
-            <div className="bg-gray-50 rounded-2xl p-4 flex flex-col gap-2.5 mb-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>📅</span>
-                <span>{new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>⏰</span>
-                <span>{displayTime(game.time)}{game.endTime ? ` – ${displayTime(game.endTime)}` : ""}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>📍</span>
-                {game.location_url
-                  ? <a href={game.location_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{game.location}</a>
-                  : <span>{game.location}</span>}
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>🏟</span>
-                <span>{game.courts} court{game.courts !== 1 ? "s" : ""}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>{game.price > 0 ? "💵" : "🆓"}</span>
-                <span>{game.price > 0 ? `NT$${Number(game.price).toFixed(0)} per player` : "Free"}</span>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <SpotsBar filled={game.players.length} max={game.maxPlayers} />
-            </div>
-            <div className="flex items-center gap-2 mb-5">
-              <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${statusColor}`}>
-                {isFull ? "Game is Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} remaining`}
-              </span>
-              {game.waitlist.length > 0 && (
-                <span className="text-xs font-semibold px-3 py-1.5 rounded-full border bg-amber-50 text-amber-600 border-amber-100">
-                  {game.waitlist.length} on waitlist
-                </span>
-              )}
-            </div>
-
-            <div className="mb-4">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
-                Registered Players ({game.players.length})
-              </h3>
-              {game.players.length === 0 ? (
-                <p className="text-sm text-gray-300 text-center py-4">No one registered yet. Be the first!</p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {game.players.map((p, i) => (
-                    <PlayerRow key={p.id} player={p} index={i} isWaitlist={false} isAdmin={isAdmin}
-                      onRemove={onRemovePlayer} />
-                  ))}
+      {/* Full screen overlay with native scroll */}
+      <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(0,0,0,0.5)" }}>
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="min-h-full flex items-end sm:items-center justify-center p-4 pt-16">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+              <div className="h-2 rounded-t-3xl" style={{ background: isFull ? "#f87171" : spotsLeft <= 2 ? "#fbbf24" : "#4ade80" }} />
+              <div className="p-5">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="flex-1">
+                    <h2 className="text-xl font-black text-gray-900 leading-tight">{game.title}</h2>
+                    {game.createdByName && <p className="text-xs text-gray-400 mt-0.5">Hosted by {game.createdByName}</p>}
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {canEdit && (
+                      <button onClick={() => { onEdit(game); onClose(); }}
+                        className="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-400 transition-colors">✏️</button>
+                    )}
+                    {canDelete && (
+                      <button onClick={handleDelete}
+                        className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 hover:bg-red-100 text-red-400 transition-colors">🗑</button>
+                    )}
+                    <button onClick={onClose}
+                      className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 text-lg">✕</button>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {game.waitlist.length > 0 && (
-              <div className="mb-5">
-                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-3">
-                  Waitlist ({game.waitlist.length})
-                </h3>
-                <div className="flex flex-col gap-2">
-                  {game.waitlist.map((p, i) => (
-                    <PlayerRow key={p.id} player={p} index={i} isWaitlist={true} isAdmin={isAdmin}
-                      onRemove={onRemovePlayer} />
-                  ))}
+                {/* Details */}
+                <div className="bg-gray-50 rounded-2xl p-4 flex flex-col gap-2.5 mb-4">
+                  <div className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="flex-shrink-0">📅</span>
+                    <span>{new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span>⏰</span>
+                    <span>{displayTime(game.time)}{game.endTime ? ` – ${displayTime(game.endTime)}` : ""}</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="flex-shrink-0">📍</span>
+                    {game.location_url
+                      ? <a href={game.location_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">{game.location}</a>
+                      : <span>{game.location}</span>}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span>🏟</span>
+                    <span>{game.courts} court{game.courts !== 1 ? "s" : ""}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span>{game.price > 0 ? "💵" : "🆓"}</span>
+                    <span>{game.price > 0 ? `NT$${Number(game.price).toFixed(0)} per player` : "Free"}</span>
+                  </div>
+                </div>
+
+                {/* Spots */}
+                <div className="mb-4"><SpotsBar filled={game.players.length} max={game.maxPlayers} /></div>
+                <div className="flex flex-wrap items-center gap-2 mb-5">
+                  <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${statusColor}`}>
+                    {isFull ? "Game is Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} remaining`}
+                  </span>
+                  {game.waitlist.length > 0 && (
+                    <span className="text-xs font-semibold px-3 py-1.5 rounded-full border bg-amber-50 text-amber-600 border-amber-100">
+                      {game.waitlist.length} on waitlist
+                    </span>
+                  )}
+                </div>
+
+                {/* Players */}
+                <div className="mb-4">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+                    Registered Players ({game.players.length})
+                  </h3>
+                  {game.players.length === 0
+                    ? <p className="text-sm text-gray-300 text-center py-4">No one registered yet. Be the first!</p>
+                    : <div className="flex flex-col gap-2">
+                        {game.players.map((p, i) => (
+                          <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} onRemove={onRemovePlayer} />
+                        ))}
+                      </div>
+                  }
+                </div>
+
+                {/* Waitlist */}
+                {game.waitlist.length > 0 && (
+                  <div className="mb-5">
+                    <h3 className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-3">
+                      Waitlist ({game.waitlist.length})
+                    </h3>
+                    <div className="flex flex-col gap-2">
+                      {game.waitlist.map((p, i) => (
+                        <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={true} isAdmin={isAdmin} onRemove={onRemovePlayer} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action */}
+                <div className="pb-2">
+                  {!isFull ? (
+                    <button onClick={() => setShowRegister(true)}
+                      className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
+                      style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+                      + Register for this Game
+                    </button>
+                  ) : (
+                    <button onClick={() => setShowRegister(true)}
+                      className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
+                      style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)" }}>
+                      Join Waitlist
+                    </button>
+                  )}
                 </div>
               </div>
-            )}
-
-            {!isFull ? (
-              <button onClick={() => setShowRegister(true)}
-                className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
-                style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-                + Register for this Game
-              </button>
-            ) : (
-              <button onClick={() => setShowRegister(true)}
-                className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
-                style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)" }}>
-                Join Waitlist
-              </button>
-            )}
+            </div>
           </div>
         </div>
+
+        {/* Tap outside to close */}
+        <div className="absolute inset-0 -z-10" onClick={onClose} />
       </div>
     </>
   );
@@ -464,36 +496,39 @@ function GameCard({ game, onClick }) {
 
   return (
     <div onClick={onClick}
-      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md active:scale-[0.99] transition-all cursor-pointer">
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden active:scale-[0.99] transition-all cursor-pointer">
       <div className="h-1" style={{ background: isFull ? "#f87171" : pct >= 0.75 ? "#fbbf24" : "#4ade80" }} />
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{game.title}</h3>
+            <h3 className="font-bold text-gray-900 text-base leading-tight">{game.title}</h3>
             <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
+            {game.createdByName && (
+              <p className="text-xs text-gray-400 mt-0.5">👤 {game.createdByName}</p>
+            )}
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
-              {isFull ? "Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`}
+              {isFull ? "Full" : `${spotsLeft} left`}
             </span>
             {isFull && game.waitlist.length > 0 && (
-              <span className="text-xs text-amber-500 font-semibold">{game.waitlist.length} on waitlist</span>
+              <span className="text-xs text-amber-500 font-semibold">{game.waitlist.length} waiting</span>
             )}
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-4">
+        <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
           <span>📅 {new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
-          <span>⏰ {displayTime(game.time)}{game.endTime ? ` – ${displayTime(game.endTime)}` : ""}</span>
-          <span>🏟 {game.courts} court{game.courts !== 1 ? "s" : ""}</span>
+          <span>⏰ {displayTime(game.time)}{game.endTime ? `–${displayTime(game.endTime)}` : ""}</span>
+          <span>🏟 {game.courts}ct</span>
           {game.price > 0
-            ? <span className="text-emerald-600 font-semibold">💵 NT${Number(game.price).toFixed(0)}/player</span>
-            : <span className="text-emerald-500 font-semibold">🆓 Free</span>
+            ? <span className="text-emerald-600 font-semibold">NT${Number(game.price).toFixed(0)}</span>
+            : <span className="text-emerald-500 font-semibold">Free</span>
           }
         </div>
 
         <SpotsBar filled={game.players.length} max={game.maxPlayers} />
-        <p className="text-xs text-gray-300 mt-3 text-right">Tap to see details & register →</p>
+        <p className="text-xs text-gray-300 mt-2 text-right">Tap to register →</p>
       </div>
     </div>
   );
@@ -501,6 +536,7 @@ function GameCard({ game, onClick }) {
 
 function GameFormModal({ game, onClose, onSave }) {
   const isEdit = !!game;
+  const today = todayString();
   const [form, setForm] = useState({
     title: game?.title || "",
     date: game?.date || "",
@@ -518,92 +554,115 @@ function GameFormModal({ game, onClose, onSave }) {
   function update(field, val) { setForm((f) => ({ ...f, [field]: val })); }
 
   async function handleSave() {
-    if (!form.title.trim() || !form.date || !form.time || !form.location.trim()) {
-      setError("Please fill in title, date, time, and location.");
-      return;
+    if (!form.title.trim()) { setError("Please enter a game title."); return; }
+    if (!form.date) { setError("Please select a date."); return; }
+    if (form.date < today) { setError("Date cannot be in the past."); return; }
+    if (!form.time) { setError("Please enter a start time."); return; }
+    if (!form.location.trim()) { setError("Please enter a location."); return; }
+    if (form.price === "" || form.price === null || form.price === undefined) {
+      setError("Please enter a price (enter 0 if free)."); return;
     }
     setLoading(true);
     try {
-      await onSave({ ...form, maxPlayers: Number(form.maxPlayers), courts: Number(form.courts), price: form.price ? Number(form.price) : 0 });
+      await onSave({ ...form, maxPlayers: Number(form.maxPlayers), courts: Number(form.courts), price: Number(form.price) });
       onClose();
-    } catch { setError("Something went wrong. Please try again."); }
+    } catch (e) { setError("Something went wrong: " + e.message); }
     setLoading(false);
   }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-5">
-          <h2 className="text-lg font-bold text-gray-900">{isEdit ? "Edit Game" : "Create New Game"}</h2>
-          <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-xl leading-none">✕</button>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto overscroll-contain">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-lg font-bold text-gray-900">{isEdit ? "Edit Game" : "Host a Game"}</h2>
+            <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-xl leading-none">✕</button>
+          </div>
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Game Title</label>
+              <input type="text" placeholder="e.g. Morning Rally" value={form.title}
+                onChange={(e) => update("title", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Date</label>
+              <input type="date" value={form.date} min={today}
+                onChange={(e) => update("date", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Start Time (24hr, e.g. 09:00)</label>
+              <input type="text" inputMode="numeric" placeholder="e.g. 09:00" value={form.time}
+                onChange={(e) => update("time", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                End Time <span className="normal-case font-normal text-gray-300">(optional, e.g. 11:00)</span>
+              </label>
+              <input type="text" inputMode="numeric" placeholder="e.g. 11:00" value={form.endTime}
+                onChange={(e) => update("endTime", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Location Name</label>
+              <input type="text" placeholder="e.g. Zhongshan Park Court 3" value={form.location}
+                onChange={(e) => update("location", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                Google Maps Link <span className="normal-case font-normal text-gray-300">(optional)</span>
+              </label>
+              <input type="url" placeholder="Paste Google Maps URL here" value={form.locationUrl}
+                onChange={(e) => update("locationUrl", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+              <p className="text-xs text-gray-300 mt-1">Open Google Maps, find the place, copy the URL and paste here.</p>
+            </div>
+
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Max Players</label>
+                <input type="number" min={2} max={64} value={form.maxPlayers}
+                  onChange={(e) => update("maxPlayers", e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Number of Courts</label>
+                <input type="number" min={1} max={20} value={form.courts}
+                  onChange={(e) => update("courts", e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                Price / Player (NTD) <span className="text-red-400">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">NT$</span>
+                <input type="number" min={0} step={10} placeholder="0" value={form.price}
+                  onChange={(e) => update("price", e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl pl-11 pr-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+              </div>
+              <p className="text-xs text-gray-300 mt-1">Enter 0 if the game is free.</p>
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-500 mt-3 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
+
+          <button onClick={handleSave} disabled={loading}
+            className="mt-5 w-full py-3.5 rounded-xl font-bold text-sm text-white disabled:opacity-50 hover:opacity-90 active:scale-95 transition-all"
+            style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+            {loading ? "Saving..." : isEdit ? "Save Changes" : "Create Game"}
+          </button>
         </div>
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Game Title</label>
-            <input type="text" placeholder="e.g. Morning Rally" value={form.title}
-              onChange={(e) => update("title", e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Date</label>
-            <input type="date" value={form.date} onChange={(e) => update("date", e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Start Time (24hr, e.g. 18:30)</label>
-            <input type="text" placeholder="e.g. 09:00" value={form.time} onChange={(e) => update("time", e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">End Time <span className="normal-case font-normal text-gray-300">(optional, e.g. 11:00)</span></label>
-            <input type="text" placeholder="e.g. 11:00" value={form.endTime} onChange={(e) => update("endTime", e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Location Name</label>
-            <input type="text" placeholder="e.g. Zhongshan Park Court 3" value={form.location}
-              onChange={(e) => update("location", e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
-              Google Maps Link <span className="normal-case font-normal text-gray-300">(optional)</span>
-            </label>
-            <input type="url" placeholder="Paste Google Maps URL here" value={form.locationUrl}
-              onChange={(e) => update("locationUrl", e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-            <p className="text-xs text-gray-300 mt-1">Open Google Maps, find the place, copy the URL and paste here.</p>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Max Players</label>
-              <input type="number" min={2} max={64} value={form.maxPlayers}
-                onChange={(e) => update("maxPlayers", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-            </div>
-            <div className="flex-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Number of Courts</label>
-              <input type="number" min={1} max={20} value={form.courts}
-                onChange={(e) => update("courts", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Price / Player (NTD)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">NT$</span>
-              <input type="number" min={0} step={10} placeholder="0" value={form.price}
-                onChange={(e) => update("price", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-            </div>
-          </div>
-        </div>
-        {error && <p className="text-xs text-red-500 mt-3">{error}</p>}
-        <button onClick={handleSave} disabled={loading}
-          className="mt-5 w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-50 hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-          {loading ? "Saving..." : isEdit ? "Save Changes" : "Create Game"}
-        </button>
       </div>
     </div>
   );
@@ -627,10 +686,10 @@ function AdminLoginModal({ onSuccess, onClose }) {
           <input autoFocus type="password" placeholder="Enter admin password" value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+            className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
           {error && <p className="text-xs text-red-500">{error}</p>}
           <button onClick={handleSubmit}
-            className="w-full py-2.5 rounded-xl font-bold text-sm text-white"
+            className="w-full py-3 rounded-xl font-bold text-sm text-white"
             style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
             Log In
           </button>
@@ -662,14 +721,14 @@ function CalendarView({ games, onGameClick }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <div className="flex items-center justify-between mb-5">
-          <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 font-bold text-lg">‹</button>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 font-bold text-xl active:bg-gray-200">‹</button>
           <span className="font-bold text-gray-800">{new Date(year, month).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
-          <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 font-bold text-lg">›</button>
+          <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 font-bold text-xl active:bg-gray-200">›</button>
         </div>
-        <div className="grid grid-cols-7 mb-2">
-          {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
+        <div className="grid grid-cols-7 mb-1">
+          {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => (
             <div key={d} className="text-center text-xs font-semibold text-gray-300 py-1">{d}</div>
           ))}
         </div>
@@ -683,12 +742,13 @@ function CalendarView({ games, onGameClick }) {
             const isSelected = dateStr === selectedDate;
             const isPast = new Date(dateStr) < new Date(today.toISOString().slice(0,10));
             return (
-              <button key={day} onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                className={`relative mx-auto w-9 h-9 flex flex-col items-center justify-center rounded-xl text-sm font-medium transition-all
-                  ${isSelected ? "text-white shadow-sm" : isToday ? "font-bold" : isPast ? "text-gray-300" : "text-gray-700 hover:bg-gray-50"}`}
+              <button key={day}
+                onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+                className={`relative mx-auto w-10 h-10 flex flex-col items-center justify-center rounded-xl text-sm font-medium transition-all active:scale-95
+                  ${isSelected ? "text-white shadow-sm" : isToday ? "font-bold" : isPast ? "text-gray-300" : "text-gray-700"}`}
                 style={isSelected ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : isToday ? { color: "#1e3a5f" } : {}}>
                 {day}
-                {hasGames && <span className={`absolute bottom-1 w-1 h-1 rounded-full ${isSelected ? "bg-white" : "bg-green-400"}`} />}
+                {hasGames && <span className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : "bg-green-400"}`} />}
               </button>
             );
           })}
@@ -709,7 +769,7 @@ function CalendarView({ games, onGameClick }) {
           }
         </div>
       )}
-      {!selectedDate && <p className="text-xs text-center text-gray-300">Tap a date with a green dot to see games</p>}
+      {!selectedDate && <p className="text-xs text-center text-gray-300 mt-2">Tap a date with a green dot to see games</p>}
     </div>
   );
 }
@@ -808,7 +868,6 @@ export default function App() {
       )}
 
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
-        {/* Top row: logo + title + user actions */}
         <div className="max-w-2xl mx-auto px-4 pt-3 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Taichung Pickleball Community" className="w-9 h-9 object-contain" />
@@ -831,17 +890,16 @@ export default function App() {
           </div>
         </div>
 
-        {/* Second row: action button + view toggle */}
         <div className="max-w-2xl mx-auto px-4 pb-3 flex items-center gap-2">
           {user ? (
             <button onClick={() => setGameForm({})}
-              className="text-white text-sm font-bold px-4 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0"
+              className="text-white text-sm font-bold px-4 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
               style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
               + Host Game
             </button>
           ) : (
             <button onClick={handleSignIn}
-              className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0"
+              className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
               style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
               <svg width="13" height="13" viewBox="0 0 48 48">
                 <path fill="#fff" opacity="0.9" d="M24 9.5c3.2 0 5.9 1.1 8.1 2.9l6-6C34.5 3.1 29.6 1 24 1 14.8 1 6.9 6.6 3.4 14.6l7 5.4C12.1 13.4 17.6 9.5 24 9.5z"/>
@@ -855,7 +913,7 @@ export default function App() {
           <div className="flex gap-1 ml-auto">
             {[{ id: "list", label: "📋 List" }, { id: "calendar", label: "📅 Calendar" }].map((v) => (
               <button key={v.id} onClick={() => setView(v.id)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${view === v.id ? "text-white" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${view === v.id ? "text-white" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
                 style={view === v.id ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : {}}>
                 {v.label}
               </button>
@@ -864,7 +922,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6">
+      <main className="max-w-2xl mx-auto px-4 py-5">
         {loading ? (
           <div className="flex items-center justify-center py-24 text-gray-300 text-sm">
             <div className="flex flex-col items-center gap-3">
@@ -874,8 +932,7 @@ export default function App() {
           </div>
         ) : view === "list" ? (
           <>
-            {/* Welcome banner */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
               <h2 className="text-base font-black text-gray-900 mb-2">Welcome! 🏓</h2>
               <p className="text-sm text-gray-500 leading-relaxed mb-4">
                 This app was built by pickleballers, for pickleballers. No group chat chaos, no missed sign-ups, no "wait am I in or not?" Just show up, play, and have fun.
@@ -885,7 +942,7 @@ export default function App() {
                 Games fill up fast, so keep an eye on new sessions and grab your spot early. See you on the court!
               </p>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">A few house rules</p>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5">
                 {[
                   "Sign up only if you're coming. Spots fill up and people are counting on a full court.",
                   "Cancel at least 24 hours ahead. Someone on the waitlist will thank you.",
@@ -904,10 +961,10 @@ export default function App() {
               </div>
             </div>
 
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Upcoming Games</h2>
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Upcoming Games</h2>
             {sorted.length === 0
-              ? <div className="text-center text-gray-300 text-sm py-20"><p className="text-4xl mb-3">🏓</p><p>No games yet.</p></div>
-              : <div className="flex flex-col gap-4">
+              ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No games yet.</p></div>
+              : <div className="flex flex-col gap-3">
                   {sorted.map((game) => (
                     <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
                   ))}
