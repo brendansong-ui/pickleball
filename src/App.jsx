@@ -1126,7 +1126,7 @@ export default function App() {
             </button>
           )}
           <div className="flex gap-0.5 ml-auto bg-gray-100 rounded-xl p-1">
-            {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "about", label: "About" }].map((v) => (
+            {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "watch", label: "Watch" }, { id: "about", label: "About" }].map((v) => (
               <button key={v.id} onClick={() => setView(v.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   view === v.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
@@ -1274,6 +1274,47 @@ export default function App() {
               <span className="text-xs font-bold px-3 py-1.5 rounded-full text-blue-600 bg-blue-50">Coming Soon</span>
             </div>
 
+          </div>
+        ) : view === "watch" ? (
+          <div className="flex flex-col gap-4">
+            <div>
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Watch & Learn</h2>
+              <p className="text-xs text-gray-300">Scroll through the best pickleball content</p>
+            </div>
+
+            {[
+              { id: "I1p7NwhGPOc", title: "Complete Beginner's Guide to Pickleball", tag: "Beginner" },
+              { id: "USVMB5zEzIc", title: "Dinking Master Class", tag: "Technique" },
+              { id: "xu6pukeV32w", title: "The Perfect 3rd Shot Drop", tag: "Technique" },
+              { id: "v6QWUweWmMc", title: "How to Serve — Beginner Lesson", tag: "Beginner" },
+              { id: "SJi8zR4hdKs", title: "Confusing Pickleball Rules Explained", tag: "Rules" },
+              { id: "G1fNM-pM9gM", title: "How to Dink — 5 Keys for Beginners", tag: "Technique" },
+              { id: "6qz-Sch2IqE", title: "Pickleball Etiquette Rules", tag: "Rules" },
+              { id: "rD1O3R9B0Sw", title: "Ultimate Guide to Pickleball Rules", tag: "Rules" },
+            ].map((video) => (
+              <div key={video.id} className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                  <iframe
+                    className="absolute inset-0 w-full h-full"
+                    src={`https://www.youtube.com/embed/${video.id}?rel=0&modestbranding=1`}
+                    title={video.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+                <div className="px-4 py-3 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-800 leading-tight flex-1 mr-3">{video.title}</p>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+                    style={{
+                      background: video.tag === "Beginner" ? "#eff6ff" : video.tag === "Rules" ? "#f0fdf4" : "#faf5ff",
+                      color: video.tag === "Beginner" ? "#3b82f6" : video.tag === "Rules" ? "#22c55e" : "#a855f7",
+                    }}>
+                    {video.tag}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         ) : view === "about" ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
