@@ -2036,7 +2036,7 @@ export default function App() {
                 {sorted.length === 0 && !showPastGames
                   ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No upcoming games.</p></div>
                   : <div className="flex flex-col gap-3">
-                      {sorted.slice(sorted.length > 1 ? 1 : 0).map((game) => (
+                      {sorted.slice(1).map((game) => (
                         <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} isPinned={pinnedGames.includes(game.id)} onTogglePin={handleTogglePin} />
                       ))}
                       {sorted.length === 1 && (
