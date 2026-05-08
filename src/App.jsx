@@ -1228,6 +1228,259 @@ function CalendarView({ games, onGameClick }) {
   );
 }
 
+const COURTS = [
+  {
+    name: "Pickle Park 匹克公園",
+    district: "Beitun",
+    area: "Beitun District · North Taichung",
+    type: "Indoor",
+    courts: 2,
+    price: "NT$600/hr (off-peak) · NT$800/hr (peak)",
+    hours: "Mon–Fri 09:00–18:00 off-peak · Mon–Fri 18:00–23:00 peak · Weekends 09:00–23:00 peak",
+    highlights: [
+      "Excellent court surface with 30+ demo paddles to test for free — great for trying before you buy",
+      "Plenty of balls on hand, making it ideal for drilling and solo practice sessions",
+      "Ball machine available if you want to work on your game alone",
+      "Stylish space with lounge sofas — perfect for booking the whole venue for a private event",
+      "Small merch corner selling branded gear plus paddles from Luzz, Everyday Social Japan, Friday, Selkirk, Bread & Butter, Napa and more",
+    ],
+    goodToKnow: [
+      "Ventilation is the main drawback — it can get hot and humid on warm days, and mosquitoes make an appearance. The owner is reportedly working on getting AC installed, so this should improve soon.",
+      "A dividing net separates the two courts, which limits ATP shots and sharper cross-court angles. Not an issue for casual social games though.",
+    ],
+    mapUrl: "https://www.google.com/maps/place/PicklePark+%E5%8C%B9%E5%85%8B%E5%85%AC%E5%9C%92%E5%AE%A4%E5%85%A7%E5%8C%B9%E5%85%8B%E7%90%83%E5%A0%B4+%E5%8C%97%E5%B1%AF%E5%A0%B4/@24.1902471,120.6747083,17z/data=!3m1!4b1!4m6!3m5!1s0x346917c4c4292985:0x10e19d72d673d8c4!8m2!3d24.1902471!4d120.6772832!16s%2Fg%2F11yy_z8r8b",
+    color: "#1e3a5f",
+  },
+  {
+    name: "Pickle King 匹克王",
+    district: "Nantun",
+    area: "Nantun District · Near Highway 74",
+    type: "Indoor",
+    courts: 6,
+    price: "NT$1,000–1,200/hr (2 premium courts with social zone at NT$1,200)",
+    hours: "Daily 09:00–22:00",
+    highlights: [
+      "Conveniently located just off Highway 74, easy to get to from most parts of Taichung",
+      "Plenty of free parking — the owner claims 400+ spaces, including at the adjacent fish market",
+      "A weekend food market is literally steps away, perfect for a post-game bite or extending the social",
+      "Proper club atmosphere — lounge area with sports on screen, food and drinks served including alcohol",
+      "Clean, well-maintained shower and bathroom facilities on-site",
+      "Good court surface and lighting throughout",
+      "Official partner with Taichung brand NAPA — lots of their paddles available to test on the day",
+      "The team runs the venue like a proper club and takes player feedback seriously",
+    ],
+    goodToKnow: [
+      "Court rental is on the pricier side compared to other venues in Taichung.",
+      "Weekend slots book up quickly — plan ahead and reserve early.",
+    ],
+    mapUrl: "https://www.google.com/maps/place/%E5%8C%B9%E5%85%8B%E7%8E%8B+PICKLE+KING%EF%BD%9C%E5%8C%B9%E5%85%8B%E7%90%83%E9%81%8B%E5%8B%95%E9%A4%90%E5%BB%B3/@24.1477486,120.6194094,17z/data=!3m1!4b1!4m6!3m5!1s0x34693d402c00a82b:0x8b8ca9677840d2be!8m2!3d24.1477486!4d120.6219843!16s%2Fg%2F11z1t8nynv",
+    color: "#7c3aed",
+  },
+  {
+    name: "LaLa Dink",
+    district: "Nantun",
+    area: "Nantun District · 文心南三路996巷1號",
+    type: "Indoor",
+    courts: 6,
+    price: "NT$600–1,200/hr depending on time · Weekday mornings cheapest, weekends & evenings most expensive",
+    hours: "Open 24 hours · By reservation only",
+    highlights: [
+      "English-friendly venue — staff and booking website are accessible in English",
+      "Food and drinks available on-site",
+      "All ages and skill levels welcome",
+      "Lessons, clinics, and DUPR-rated events available",
+    ],
+    goodToKnow: [],
+    mapUrl: "https://www.google.com/maps/place/LaLa+Dink+%7C+Pickleball+club+%E5%8C%B9%E5%85%8B%E7%90%83%E4%BF%B1%E6%A8%82%E9%83%A8/@24.1347622,120.6344121,17z/data=!3m1!4b1!4m6!3m5!1s0x34693d56ce4231f5:0x36dbbe4962b2ed8d!8m2!3d24.1347622!4d120.636987!16s%2Fg%2F11x_mmx_36",
+    bookingUrl: "https://tinybot.cc/laladink/bookingcourt/",
+    color: "#059669",
+  },
+];
+
+const DISTRICTS = ["All", "Beitun", "North", "West", "Central", "East", "South", "Nantun", "Xitun"];
+
+function CourtsTab() {
+  const [districtFilter, setDistrictFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [courtsView, setCourtsView] = useState("list");
+
+  const filtered = COURTS.filter(c => {
+    const districtMatch = districtFilter === "All" || c.district === districtFilter;
+    const typeMatch = typeFilter === "All" || c.type === typeFilter;
+    return districtMatch && typeMatch;
+  });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="bg-white rounded-2xl p-4" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+        <h2 className="text-base font-black text-gray-900 mb-1">Courts We've Played At</h2>
+        <p className="text-sm text-gray-500 leading-relaxed">These are venues our community has personally visited and can vouch for. We'll keep adding more as we explore new spots around Taichung.</p>
+      </div>
+
+      {/* List / Map toggle */}
+      <div className="flex gap-0.5 bg-gray-100 rounded-xl p-1 self-start">
+        <button onClick={() => setCourtsView("list")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            courtsView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+          }`}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          List
+        </button>
+        <button onClick={() => setCourtsView("map")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            courtsView === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+          }`}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          Map
+        </button>
+      </div>
+
+      {courtsView === "map" ? (
+        <div className="flex flex-col gap-3">
+          <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+            <iframe
+              width="100%"
+              height="380"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              title="Taichung Pickleball Courts"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d58652!2d120.637!3d24.155!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x346917c4c4292985:0x10e19d72d673d8c4!2sPickle+Park!3m2!1d24.190247!2d120.677283!4m5!1s0x34693d402c00a82b:0x8b8ca9677840d2be!2sPickle+King!3m2!1d24.147749!2d120.621984!5e0!3m2!1sen!2stw!4v1"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            {COURTS.map((court, i) => (
+              <a key={i} href={court.mapUrl} target="_blank" rel="noopener noreferrer"
+                className="bg-white rounded-xl p-3 flex items-center gap-3 active:scale-[0.99] transition-all"
+                style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                <div className="w-2 h-10 rounded-full flex-shrink-0" style={{ background: court.color }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-800 leading-tight">{court.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{court.area}</p>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-2">
+            {["All", "Indoor", "Outdoor"].map(t => (
+              <button key={t} onClick={() => setTypeFilter(t)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                  typeFilter === t ? "text-white border-transparent" : "text-gray-500 bg-white border-gray-200"
+                }`}
+                style={typeFilter === t ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : {}}>
+                {t}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {DISTRICTS.map(d => (
+              <button key={d} onClick={() => setDistrictFilter(d)}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                  districtFilter === d ? "text-white border-transparent" : "text-gray-500 bg-white border-gray-200"
+                }`}
+                style={districtFilter === d ? { background: "#06C755" } : {}}>
+                {d === "All" ? "All Districts" : `${d} District`}
+              </button>
+            ))}
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="text-center py-12 text-gray-300 text-sm">
+              <p className="text-3xl mb-2">🏟</p>
+              <p>No courts match your filters yet.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filtered.map((court, i) => (
+                <a key={i} href={court.mapUrl} target="_blank" rel="noopener noreferrer"
+                  className="bg-white rounded-2xl overflow-hidden block active:scale-[0.99] transition-all"
+                  style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                  <div className="h-1.5" style={{ background: court.color }} />
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div>
+                        <h3 className="font-bold text-gray-900 text-base leading-tight">{court.name}</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">📍 {court.area}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-50 text-gray-500 border border-gray-100">{court.type}</span>
+                        {court.courts && <span className="text-xs text-gray-400">{court.courts} courts</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5 text-xs text-gray-500 mb-3">
+                      <div className="flex items-start gap-2"><span className="flex-shrink-0">💵</span><span>{court.price}</span></div>
+                      <div className="flex items-start gap-2"><span className="flex-shrink-0">🕐</span><span>{court.hours}</span></div>
+                    </div>
+                    {court.highlights?.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Highlights</p>
+                        <div className="flex flex-col gap-1.5">
+                          {court.highlights.map((h, j) => (
+                            <div key={j} className="flex items-start gap-2 text-xs text-gray-500">
+                              <span className="text-green-500 flex-shrink-0 mt-0.5">✓</span><span>{h}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {court.goodToKnow?.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Good to Know</p>
+                        <div className="flex flex-col gap-1.5">
+                          {court.goodToKnow.map((g, j) => (
+                            <div key={j} className="flex items-start gap-2 text-xs text-gray-500">
+                              <span className="text-amber-500 flex-shrink-0 mt-0.5">!</span><span>{g}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs text-gray-300">Tap to open in Maps</span>
+                      <div className="flex items-center gap-2">
+                        {court.bookingUrl && (
+                          <a href={court.bookingUrl} target="_blank" rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg"
+                            style={{ background: "#06C755" }}>
+                            Book
+                          </a>
+                        )}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                          <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+
+          <div className="rounded-2xl border-2 border-dashed border-gray-200 p-5 text-center">
+            <p className="text-sm font-semibold text-gray-500 mb-1">Know a court we're missing?</p>
+            <p className="text-xs text-gray-400">Message us on LINE and we'll add it.</p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1616,161 +1869,7 @@ export default function App() {
             ))}
           </div>
         ) : view === "courts" ? (
-          <div className="flex flex-col gap-4">
-            <div className="bg-white rounded-2xl p-4" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-              <h2 className="text-base font-black text-gray-900 mb-1">Courts We've Played At</h2>
-              <p className="text-sm text-gray-500 leading-relaxed">These are venues our community has personally visited and can vouch for. We'll keep adding more as we explore new spots around Taichung.</p>
-            </div>
-
-            {[
-              {
-                name: "Pickle Park 匹克公園",
-                area: "Beitun District, North Taichung",
-                type: "Indoor",
-                courts: 2,
-                price: "NT$600/hr (off-peak) · NT$800/hr (peak)",
-                hours: "Mon–Fri 09:00–18:00 off-peak · Mon–Fri 18:00–23:00 peak · Weekends 09:00–23:00 peak",
-                highlights: [
-                  "Excellent court surface with 30+ demo paddles to test for free — great for trying before you buy",
-                  "Plenty of balls on hand, making it ideal for drilling and solo practice sessions",
-                  "Ball machine available if you want to work on your game alone",
-                  "Stylish space with lounge sofas — perfect for booking the whole venue for a private event",
-                  "Small merch corner selling their own branded gear plus paddles from Luzz, Everyday Social Japan, Friday, Selkirk, Bread & Butter, Napa and more",
-                ],
-                goodToKnow: [
-                  "Ventilation is the main drawback — it can get hot and humid on warm days, and mosquitoes make an appearance. The owner is reportedly working on getting AC installed, so this should improve soon.",
-                  "A dividing net separates the two courts, which limits ATP shots and sharper cross-court angles. Not an issue for casual social games though.",
-                ],
-                mapUrl: "https://www.google.com/maps/place/PicklePark+%E5%8C%B9%E5%85%8B%E5%85%AC%E5%9C%92%E5%AE%A4%E5%85%A7%E5%8C%B9%E5%85%8B%E7%90%83%E5%A0%B4+%E5%8C%97%E5%B1%AF%E5%A0%B4/@24.1902471,120.6747083,17z/data=!3m1!4b1!4m6!3m5!1s0x346917c4c4292985:0x10e19d72d673d8c4!8m2!3d24.1902471!4d120.6772832!16s%2Fg%2F11yy_z8r8b",
-                color: "#1e3a5f",
-              },
-              {
-                name: "Pickle King 匹克王",
-                area: "Taichung City",
-                type: "Indoor",
-                courts: 6,
-                price: "NT$1,000–1,200/hr (2 premium courts with social zone at NT$1,200)",
-                hours: "Daily 09:00–22:00",
-                highlights: [
-                  "Conveniently located just off Highway 74, easy to get to from most parts of Taichung",
-                  "Plenty of free parking — the owner claims 400+ spaces, including at the adjacent fish market",
-                  "A weekend food market is literally steps away, perfect for a post-game bite or extending the social",
-                  "Proper club atmosphere — lounge area with sports on screen, food and drinks served including alcohol",
-                  "Clean, well-maintained shower and bathroom facilities on-site",
-                  "Good court surface and lighting throughout",
-                  "Official partner with Taichung brand NAPA — lots of their paddles available to test on the day",
-                  "The team runs the venue like a proper club and takes player feedback seriously",
-                ],
-                goodToKnow: [
-                  "Court rental is on the pricier side compared to other venues in Taichung.",
-                  "Weekend slots book up quickly — plan ahead and reserve early.",
-                ],
-                mapUrl: "https://www.google.com/maps/place/%E5%8C%B9%E5%85%8B%E7%8E%8B+PICKLE+KING%EF%BD%9C%E5%8C%B9%E5%85%8B%E7%90%83%E9%81%8B%E5%8B%95%E9%A4%90%E5%BB%B3/@24.1477486,120.6194094,17z/data=!3m1!4b1!4m6!3m5!1s0x34693d402c00a82b:0x8b8ca9677840d2be!8m2!3d24.1477486!4d120.6219843!16s%2Fg%2F11z1t8nynv",
-                color: "#7c3aed",
-              },
-              {
-                name: "LaLa Dink",
-                area: "Nantun District · 文心南三路996巷1號",
-                type: "Indoor",
-                courts: 6,
-                price: "NT$600–1,200/hr depending on time · Weekday mornings cheapest, weekends & evenings most expensive",
-                hours: "Open 24 hours · By reservation only",
-                highlights: [
-                  "English-friendly venue — staff and booking website are accessible in English",
-                  "Food and drinks available on-site",
-                  "All ages and skill levels welcome",
-                  "Lessons, clinics, and DUPR-rated events available",
-                ],
-                goodToKnow: [],
-                mapUrl: "https://www.google.com/maps/place/LaLa+Dink+%7C+Pickleball+club+%E5%8C%B9%E5%85%8B%E7%90%83%E4%BF%B1%E6%A8%82%E9%83%A8/@24.1347622,120.6344121,17z/data=!3m1!4b1!4m6!3m5!1s0x34693d56ce4231f5:0x36dbbe4962b2ed8d!8m2!3d24.1347622!4d120.636987!16s%2Fg%2F11x_mmx_36",
-                bookingUrl: "https://tinybot.cc/laladink/bookingcourt/",
-                color: "#059669",
-              },
-            ].map((court, i) => (
-              <a key={i} href={court.mapUrl} target="_blank" rel="noopener noreferrer"
-                className="bg-white rounded-2xl overflow-hidden block active:scale-[0.99] transition-all"
-                style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                <div className="h-1.5" style={{ background: court.color }} />
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div>
-                      <h3 className="font-bold text-gray-900 text-base leading-tight">{court.name}</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">📍 {court.area}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-50 text-gray-500 border border-gray-100">
-                        {court.type}
-                      </span>
-                      {court.courts && (
-                        <span className="text-xs text-gray-400">{court.courts} courts</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1.5 text-xs text-gray-500 mb-3">
-                    <div className="flex items-start gap-2">
-                      <span className="flex-shrink-0">💵</span>
-                      <span>{court.price}</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="flex-shrink-0">🕐</span>
-                      <span>{court.hours}</span>
-                    </div>
-                  </div>
-
-                  {court.highlights?.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Highlights</p>
-                      <div className="flex flex-col gap-1.5">
-                        {court.highlights.map((h, i) => (
-                          <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
-                            <span className="text-green-500 flex-shrink-0 mt-0.5">✓</span>
-                            <span>{h}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {court.goodToKnow?.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Good to Know</p>
-                      <div className="flex flex-col gap-1.5">
-                        {court.goodToKnow.map((g, i) => (
-                          <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
-                            <span className="text-amber-500 flex-shrink-0 mt-0.5">!</span>
-                            <span>{g}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-xs text-gray-300">Tap to open in Maps</span>
-                    <div className="flex items-center gap-2">
-                      {court.bookingUrl && (
-                        <a href={court.bookingUrl} target="_blank" rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg"
-                          style={{ background: "#06C755" }}>
-                          Book
-                        </a>
-                      )}
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                        <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </a>
-            ))}
-
-            <div className="rounded-2xl border-2 border-dashed border-gray-200 p-5 text-center">
-              <p className="text-sm font-semibold text-gray-500 mb-1">Know a court we're missing?</p>
-              <p className="text-xs text-gray-400">Message us on LINE and we'll add it.</p>
-            </div>
-          </div>
+          <CourtsTab />
         ) : view === "about" ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung!</h2>
