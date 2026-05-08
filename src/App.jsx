@@ -1617,9 +1617,9 @@ export default function App() {
           </div>
         ) : view === "courts" ? (
           <div className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Courts in Taichung</h2>
-              <p className="text-xs text-gray-300">Tap a court to open in Google Maps</p>
+            <div className="bg-white rounded-2xl p-4" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              <h2 className="text-base font-black text-gray-900 mb-1">Courts We've Played At</h2>
+              <p className="text-sm text-gray-500 leading-relaxed">These are venues our community has personally visited and can vouch for. We'll keep adding more as we explore new spots around Taichung.</p>
             </div>
 
             {[
@@ -1631,7 +1631,7 @@ export default function App() {
                 price: "NT$600/hr (off-peak) · NT$800/hr (peak)",
                 hours: "Mon–Fri 09:00–18:00 off-peak · Mon–Fri 18:00–23:00 peak · Weekends 09:00–23:00 peak",
                 notes: "Book in advance. Non-marking shoes required.",
-                mapUrl: "https://www.google.com/maps/place/PicklePark+匹克公園室內匹克球場+北屯場/@24.1902471,120.6772832,17z",
+                mapUrl: "https://maps.google.com/?q=PicklePark+匹克公園室內匹克球場+北屯場&ll=24.1902471,120.6772832",
                 color: "#1e3a5f",
               },
               {
@@ -1642,18 +1642,19 @@ export default function App() {
                 price: "NT$1,000–1,200/hr (2 premium courts with social zone at NT$1,200)",
                 hours: "Daily 09:00–22:00",
                 notes: "Professional competition-grade venue. 2 courts include a player lounge area.",
-                mapUrl: "https://www.google.com/maps/place/匹克王+PICKLE+KING｜匹克球運動餐廳/@24.1477486,120.6219843,17z",
+                mapUrl: "https://maps.google.com/?q=匹克王+PICKLE+KING&ll=24.1477486,120.6219843",
                 color: "#7c3aed",
               },
               {
                 name: "LaLa Dink",
                 area: "Nantun District · 文心南三路996巷1號",
                 type: "Indoor",
-                courts: null,
-                price: "NT$150/2hrs (trial) · NT$200+/2hrs regular",
-                hours: "By reservation only",
-                notes: "Food & drinks available. All ages welcome. Lessons and clinics available.",
-                mapUrl: "https://www.google.com/maps/place/LaLa+Dink+|+Pickleball+club+匹克球俱樂部/@24.1347622,120.636987,17z",
+                courts: 6,
+                price: "NT$600–1,200/hr depending on time · Weekday mornings cheapest, weekends & evenings most expensive",
+                hours: "Open 24 hours · By reservation only",
+                notes: "English-friendly. Food & drinks available. All ages welcome. Lessons and clinics available.",
+                mapUrl: "https://maps.google.com/?q=LaLa+Dink+Pickleball+Club&ll=24.1347622,120.636987",
+                bookingUrl: "https://tinybot.cc/laladink/bookingcourt/",
                 color: "#059669",
               },
             ].map((court, i) => (
@@ -1694,10 +1695,20 @@ export default function App() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-300">Tap to open in Maps</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                      <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                    </svg>
+                    <div className="flex items-center gap-2">
+                      {court.bookingUrl && (
+                        <a href={court.bookingUrl} target="_blank" rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg"
+                          style={{ background: "#06C755" }}>
+                          Book
+                        </a>
+                      )}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                        <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </a>
