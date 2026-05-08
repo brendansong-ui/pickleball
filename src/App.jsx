@@ -928,14 +928,8 @@ function GameCard({ game, onClick, isPinned, onTogglePin }) {
             {/* Right side: status + ellipsis */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
               <div className="flex items-center gap-1.5">
-                {almostFull && (
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                  </span>
-                )}
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
-                  {isFull ? "Full" : `${spotsLeft} left`}
+                  {isFull ? "Full" : "Open"}
                 </span>
                 {/* Ellipsis button */}
                 <button onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}
@@ -954,11 +948,23 @@ function GameCard({ game, onClick, isPinned, onTogglePin }) {
           <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
             <span>📅 {new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
             <span>⏰ {displayTime(game.time)}{game.endTime ? `–${displayTime(game.endTime)}` : ""}</span>
-            <span>🏟 {game.courts}ct</span>
+            <span>🏟 {game.courts}</span>
             {game.price > 0
               ? <span className="text-emerald-600 font-semibold">NT${Number(game.price).toFixed(0)}</span>
               : <span className="text-emerald-500 font-semibold">Free</span>
             }
+          </div>
+
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+              {game.players.length} / {game.maxPlayers} joined
+            </span>
+            {almostFull && !isFull && (
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              </span>
+            )}
           </div>
 
           <button
