@@ -117,6 +117,57 @@ async function getUser(token) {
   } catch { return null; }
 }
 
+// Profile functions
+async function fetchProfile(userId, token) {
+  try {
+    const data = await sbFetch(`profiles?id=eq.${userId}&select=*`, {}, token);
+    return data?.[0] || null;
+  } catch { return null; }
+}
+
+async function upsertProfile(userId, data, token) {
+  return sbFetch("profiles", {
+    method: "POST",
+    prefer: "return=representation,resolution=merge-duplicates",
+    headers: { "Prefer": "return=representation,resolution=merge-duplicates" },
+    body: JSON.stringify({ id: userId, ...data }),
+  }, token);
+}
+
+async function incrementGamesPlayed(userId, token) {
+  try {
+    const profile = await fetchProfile(userId, token);
+    const current = profile?.games_played || 0;
+    await upsertProfile(userId, { games_played: current + 1 }, token);
+  } catch {}
+}
+
+function getInitialsAvatar(name) {
+  const initials = name ? name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) : "?";
+  const colors = ["#1e3a5f", "#2d5a8e", "#06C755", "#f59e0b", "#8b5cf6", "#ef4444", "#0891b2"];
+  const color = colors[name ? name.charCodeAt(0) % colors.length : 0];
+  return { initials, color };
+}
+
+function Avatar({ url, name, size = 8, className = "" }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const { initials, color } = getInitialsAvatar(name);
+  const px = size * 4;
+  if (url && !imgFailed) {
+    return (
+      <img src={url} alt={name} onError={() => setImgFailed(true)}
+        className={`rounded-full object-cover flex-shrink-0 ${className}`}
+        style={{ width: px, height: px }} />
+    );
+  }
+  return (
+    <div className={`rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold ${className}`}
+      style={{ width: px, height: px, background: color, fontSize: px * 0.35 }}>
+      {initials}
+    </div>
+  );
+}
+
 function getGuestTokens() {
   try { return JSON.parse(localStorage.getItem(GUEST_TOKENS_KEY) || "{}"); }
   catch { return {}; }
@@ -155,6 +206,7 @@ async function fetchGames(token) {
       .sort((a, b) => (b.is_host ? 1 : 0) - (a.is_host ? 1 : 0))
       .map((r) => ({
         id: r.id,
+        userId: r.user_id || null,
         name: r.name,
         duprRating: r.dupr_rating,
         avatarUrl: r.avatar_url || null,
@@ -165,6 +217,7 @@ async function fetchGames(token) {
       .filter((r) => r.game_id === g.id && r.is_waitlist)
       .map((r) => ({
         id: r.id,
+        userId: r.user_id || null,
         name: r.name,
         duprRating: r.dupr_rating,
         avatarUrl: r.avatar_url || null,
@@ -191,6 +244,7 @@ async function createGame(data, token) {
       body: JSON.stringify({
         game_id: result[0].id, name: data.createdByName || data.createdBy,
         dupr_rating: null, is_waitlist: false, avatar_url: data.createdByAvatar || null,
+        user_id: data.createdByUserId || null,
         guest_token: guestToken, is_host: true,
       }),
     });
@@ -224,6 +278,7 @@ async function createRegistration(gameId, player, isWaitlist = false) {
       game_id: gameId, name: player.name,
       dupr_rating: player.duprRating || null,
       avatar_url: player.avatarUrl || null,
+      user_id: player.userId || null,
       is_waitlist: isWaitlist, guest_token: guestToken,
     }),
   });
@@ -269,7 +324,7 @@ function SpotsBar({ filled, max }) {
   );
 }
 
-function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove }) {
+function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewProfile }) {
   const [leaving, setLeaving] = useState(false);
   const withinCutoff = !canCancelRegistration(game.date, game.time);
 
@@ -287,20 +342,14 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove }) {
 
   return (
     <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
-      <div className="flex items-center gap-2.5">
-        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden
-          ${isWaitlist ? "bg-amber-400" : player.isHost ? "bg-gradient-to-br from-green-400 to-green-600" : "bg-gradient-to-br from-blue-400 to-blue-600"}`}>
-          {player.avatarUrl
-            ? <img src={player.avatarUrl} className="w-full h-full object-cover" alt="" onError={(e) => e.target.style.display="none"} />
-            : isWaitlist ? index + 1 : player.name.charAt(0).toUpperCase()
-          }
-        </div>
+      <button className="flex items-center gap-2.5 flex-1 min-w-0 text-left" onClick={() => player.userId && onViewProfile && onViewProfile(player.userId)}>
+        <Avatar url={player.avatarUrl} name={player.name} size={7} />
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-medium text-gray-700">{player.name}</span>
           {player.isHost && <span className="text-xs font-bold text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full">Host</span>}
           {isWaitlist && <span className="text-xs text-amber-500 font-semibold">#{index + 1} waitlist</span>}
         </div>
-      </div>
+      </button>
       <div className="flex items-center gap-2 flex-shrink-0">
         {player.duprRating != null && (
           <span className={`text-xs font-bold ${ratingColor(player.duprRating)}`}>
@@ -315,6 +364,135 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove }) {
             {leaving ? "..." : isAdmin && !player.canLeave ? "✕" : "Leave"}
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile }) {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [duprRating, setDuprRating] = useState("");
+  const [duprUrl, setDuprUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      const p = await fetchProfile(userId, token);
+      setProfile(p);
+      setDuprRating(p?.dupr_rating?.toString() || "");
+      setDuprUrl(p?.dupr_url || "");
+      setLoading(false);
+    }
+    load();
+  }, [userId]);
+
+  async function handleSave() {
+    setSaving(true);
+    const rating = duprRating ? parseFloat(duprRating) : null;
+    await upsertProfile(userId, {
+      display_name: currentUser?.user_metadata?.full_name || currentUser?.email,
+      avatar_url: currentUser?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null,
+      dupr_rating: rating,
+      dupr_url: duprUrl.trim() || null,
+    }, token);
+    const updated = await fetchProfile(userId, token);
+    setProfile(updated);
+    setEditing(false);
+    setSaving(false);
+  }
+
+  const name = profile?.display_name || currentUser?.user_metadata?.full_name || "Player";
+  const avatarUrl = profile?.avatar_url || currentUser?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null;
+  const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+        {/* Header banner */}
+        <div className="h-20 relative" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+          <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/20 text-white text-sm">✕</button>
+        </div>
+
+        <div className="px-5 pb-5">
+          {/* Avatar — overlaps banner */}
+          <div className="flex items-end justify-between -mt-8 mb-3">
+            <div className="ring-4 ring-white rounded-full">
+              <Avatar url={avatarUrl} name={name} size={16} />
+            </div>
+            {isOwnProfile && !editing && (
+              <button onClick={() => setEditing(true)}
+                className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+                Edit Profile
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="text-center py-6 text-gray-300 text-sm">Loading...</div>
+          ) : (
+            <>
+              <h2 className="text-lg font-black text-gray-900">{name}</h2>
+              {memberSince && <p className="text-xs text-gray-400 mb-4">Member since {memberSince}</p>}
+
+              {/* Stats */}
+              <div className="flex gap-3 mb-4">
+                <div className="flex-1 bg-gray-50 rounded-2xl p-3 text-center">
+                  <p className="text-xl font-black text-gray-900">{profile?.games_played || 0}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Games Played</p>
+                </div>
+                <div className="flex-1 bg-gray-50 rounded-2xl p-3 text-center">
+                  <p className="text-xl font-black" style={{ color: profile?.dupr_rating ? "#1e3a5f" : "#d1d5db" }}>
+                    {profile?.dupr_rating ? Number(profile.dupr_rating).toFixed(2) : "—"}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">DUPR Rating</p>
+                </div>
+              </div>
+
+              {/* DUPR link */}
+              {profile?.dupr_url && !editing && (
+                <a href={profile.dupr_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold text-white mb-3"
+                  style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+                  View DUPR Profile →
+                </a>
+              )}
+
+              {/* Edit form */}
+              {editing && (
+                <div className="flex flex-col gap-3 mt-2">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">DUPR Rating</label>
+                    <input type="number" min="2" max="8" step="0.01" placeholder="e.g. 3.75"
+                      value={duprRating} onChange={(e) => setDuprRating(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                      DUPR Profile URL <span className="normal-case font-normal text-gray-300">(optional)</span>
+                    </label>
+                    <input type="url" placeholder="https://app.mydupr.com/profile/..." 
+                      value={duprUrl} onChange={(e) => setDuprUrl(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
+                    <p className="text-xs text-gray-300 mt-1">Paste your DUPR profile link so others can verify your rating.</p>
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <button onClick={() => setEditing(false)}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-500 bg-gray-100">
+                      Cancel
+                    </button>
+                    <button onClick={handleSave} disabled={saving}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                      style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+                      {saving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -403,7 +581,7 @@ function RegisterModal({ game, onRegister, onClose, user }) {
 }
 
 // Full-screen game detail — uses native scroll, no fixed overlay clipping
-function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAdmin, onDelete, onEdit }) {
+function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAdmin, onDelete, onEdit, onViewProfile }) {
   const [showRegister, setShowRegister] = useState(false);
   const isFull = game.players.length >= game.maxPlayers;
   const spotsLeft = game.maxPlayers - game.players.length;
@@ -543,7 +721,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                     ? <p className="text-sm text-gray-300 text-center py-4">No one registered yet. Be the first!</p>
                     : <div className="flex flex-col gap-2">
                         {game.players.map((p, i) => (
-                          <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} onRemove={onRemovePlayer} />
+                          <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
                         ))}
                       </div>
                   }
@@ -557,7 +735,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                     </h3>
                     <div className="flex flex-col gap-2">
                       {game.waitlist.map((p, i) => (
-                        <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={true} isAdmin={isAdmin} onRemove={onRemovePlayer} />
+                        <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={true} isAdmin={isAdmin} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
                       ))}
                     </div>
                   </div>
@@ -1002,6 +1180,7 @@ export default function App() {
   const [gameForm, setGameForm] = useState(null);
   const [selectedGame, setSelectedGame] = useState(null);
   const [view, setView] = useState("games");
+  const [profileUserId, setProfileUserId] = useState(null);
 
   useEffect(() => {
     // Prevent pinch-to-zoom on iOS Safari
@@ -1015,7 +1194,14 @@ export default function App() {
       const t = await getSession();
       if (t) {
         const u = await getUser(t);
-        if (u) { setToken(t); setUser(u); }
+        if (u) {
+          setToken(t); setUser(u);
+          // Create profile if it doesn't exist
+          upsertProfile(u.id, {
+            display_name: u.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || u.email,
+            avatar_url: u.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null,
+          }, t).catch(() => {});
+        }
         else { sessionStorage.removeItem("sb_token"); }
       }
       await loadGames(t);
@@ -1036,7 +1222,8 @@ export default function App() {
   }
 
   async function handleRegister(gameId, player, isWaitlist = false) {
-    await createRegistration(gameId, player, isWaitlist);
+    await createRegistration(gameId, { ...player, userId: user?.id || null }, isWaitlist);
+    if (user?.id) await incrementGamesPlayed(user.id, token);
     await loadGames();
   }
 
@@ -1051,7 +1238,7 @@ export default function App() {
     if (gameForm?.id) {
       await updateGame(gameForm.id, data, token);
     } else {
-      await createGame({ ...data, createdBy: user?.email || null, createdByName: displayName, createdByAvatar: avatarUrl }, token);
+      await createGame({ ...data, createdBy: user?.email || null, createdByName: displayName, createdByAvatar: avatarUrl, createdByUserId: user?.id || null }, token);
     }
     await loadGames();
   }
@@ -1066,6 +1253,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: "#f8f9fb" }}>
+      {profileUserId && (
+        <ProfileModal
+          userId={profileUserId}
+          currentUser={user}
+          token={token}
+          isOwnProfile={user?.id === profileUserId}
+          onClose={() => setProfileUserId(null)}
+        />
+      )}
       {gameForm !== null && (
         <GameFormModal game={gameForm?.id ? gameForm : null} onClose={() => setGameForm(null)} onSave={handleSaveGame} />
       )}
@@ -1082,6 +1278,7 @@ export default function App() {
           isAdmin={isAdmin}
           onDelete={handleDelete}
           onEdit={(g) => { setGameForm(g); setSelectedGame(null); }}
+          onViewProfile={(uid) => setProfileUserId(uid)}
         />
       )}
 
@@ -1096,12 +1293,9 @@ export default function App() {
           </div>
           <div className="flex items-center gap-2">
             {user ? (
-              <>
-                {user.user_metadata?.avatar_url && (
-                  <img src={user.user_metadata.avatar_url} className="w-8 h-8 rounded-full ring-2 ring-white shadow-sm" alt=""
-                    onError={(e) => e.target.style.display="none"} />
-                )}
-              </>
+              <button onClick={() => setProfileUserId(user.id)} className="focus:outline-none">
+                <Avatar url={user.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url")} name={user.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || user.email} size={8} className="ring-2 ring-white shadow-sm" />
+              </button>
             ) : (
               <button onClick={() => setShowAdminLogin(true)} className="text-gray-200 hover:text-gray-400 text-base px-1 transition-colors" title="Admin">⚙️</button>
             )}
