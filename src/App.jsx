@@ -217,6 +217,7 @@ async function fetchGames(token) {
     maxPlayers: g.max_players,
     endTime: g.end_time,
     courts: g.courts || 1,
+    notes: g.notes || null,
     createdByName: g.created_by_name || g.created_by || null,
     createdByEmail: g.created_by || null,
     players: registrations
@@ -251,7 +252,7 @@ async function createGame(data, token) {
       title: data.title, date: data.date, time: data.time,
       end_time: data.endTime || null, location: data.location,
       location_url: data.locationUrl || null, max_players: data.maxPlayers,
-      price: data.price, courts: data.courts || 1,
+      price: data.price, courts: data.courts || 1, notes: data.notes || null,
       created_by: data.createdBy || null, created_by_name: data.createdByName || null,
     }),
   }, token);
@@ -278,7 +279,7 @@ async function updateGame(gameId, data, token) {
       title: data.title, date: data.date, time: data.time,
       end_time: data.endTime || null, location: data.location,
       location_url: data.locationUrl || null, max_players: data.maxPlayers,
-      price: data.price, courts: data.courts || 1,
+      price: data.price, courts: data.courts || 1, notes: data.notes || null,
     }),
   }, token);
 }
@@ -721,6 +722,25 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                   </div>
                 </div>
 
+                {/* Game full banner */}
+                {isFull && (
+                  <div className="mb-4 rounded-xl px-4 py-3 flex items-center gap-2.5" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
+                    <span className="text-lg">🔒</span>
+                    <div>
+                      <p className="text-sm font-bold text-red-600">This game is full</p>
+                      <p className="text-xs text-red-400 mt-0.5">Join the waitlist to get notified if a spot opens up</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Host notes */}
+                {game.notes && (
+                  <div className="mb-4 bg-blue-50 rounded-xl px-4 py-3">
+                    <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">Host Notes</p>
+                    <p className="text-sm text-blue-600 leading-relaxed">{game.notes}</p>
+                  </div>
+                )}
+
                 {/* Spots */}
                 <div className="mb-4"><SpotsBar filled={game.players.length} max={game.maxPlayers} /></div>
                 <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -919,6 +939,7 @@ function GameFormModal({ game, onClose, onSave }) {
     maxPlayers: game?.maxPlayers || 8,
     courts: game?.courts || 1,
     price: game?.price ?? "",
+    notes: game?.notes || "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -1076,6 +1097,16 @@ function GameFormModal({ game, onClose, onSave }) {
               </div>
               <p className="text-xs text-gray-300 mt-1">Enter 0 if the game is free.</p>
             </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                Host Notes <span className="normal-case font-normal text-gray-300">(optional)</span>
+              </label>
+              <textarea rows={3} placeholder="e.g. Bring your own balls. Wear non-marking shoes. Free parking out front."
+                value={form.notes} onChange={(e) => update("notes", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 resize-none" />
+              <p className="text-xs text-gray-300 mt-1">Players will see this when they view your game.</p>
+            </div>
           </div>
 
           {error && <p className="text-xs text-red-500 mt-3 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
@@ -1209,6 +1240,7 @@ export default function App() {
   const [view, setView] = useState("games");
   const [profileUserId, setProfileUserId] = useState(null);
   const [playView, setPlayView] = useState("list");
+  const [showPastGames, setShowPastGames] = useState(false);
 
   useEffect(() => {
     // Prevent pinch-to-zoom on iOS Safari
@@ -1279,7 +1311,11 @@ export default function App() {
     await loadGames();
   }
 
-  const sorted = [...games].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const now = new Date();
+  const allSorted = [...games].sort((a, b) => new Date(a.date + "T" + a.time) - new Date(b.date + "T" + b.time));
+  const upcomingGames = allSorted.filter(g => new Date(g.date + "T" + (g.endTime || g.time)) >= now);
+  const pastGames = allSorted.filter(g => new Date(g.date + "T" + (g.endTime || g.time)) < now);
+  const sorted = upcomingGames;
 
   return (
     <div className="min-h-screen" style={{ background: "#f8f9fb" }}>
@@ -1351,7 +1387,7 @@ export default function App() {
         {/* Row 2: tabs */}
         <div className="max-w-2xl mx-auto px-4 pb-2">
           <div className="flex gap-0.5 bg-gray-100 rounded-xl p-1 w-full">
-            {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "watch", label: "Watch" }, { id: "about", label: "About" }].map((v) => (
+            {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "watch", label: "Watch" }, { id: "courts", label: "Courts" }, { id: "about", label: "About" }].map((v) => (
               <button key={v.id} onClick={() => setView(v.id)}
                 className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   view === v.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
@@ -1405,13 +1441,31 @@ export default function App() {
             </div>
 
             {playView === "list" ? (
-              sorted.length === 0
-                ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No games yet.</p></div>
-                : <div className="flex flex-col gap-3">
-                    {sorted.map((game) => (
-                      <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
-                    ))}
+              <>
+                {sorted.length === 0 && !showPastGames
+                  ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No upcoming games.</p></div>
+                  : <div className="flex flex-col gap-3">
+                      {sorted.map((game) => (
+                        <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
+                      ))}
+                    </div>
+                }
+                {pastGames.length > 0 && (
+                  <div className="mt-4">
+                    <button onClick={() => setShowPastGames(v => !v)}
+                      className="w-full py-2.5 text-xs font-semibold text-gray-400 bg-white rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                      {showPastGames ? "Hide past games ↑" : `Show ${pastGames.length} past game${pastGames.length !== 1 ? "s" : ""} ↓`}
+                    </button>
+                    {showPastGames && (
+                      <div className="flex flex-col gap-3 mt-3 opacity-60">
+                        {pastGames.slice().reverse().map((game) => (
+                          <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
+                        ))}
+                      </div>
+                    )}
                   </div>
+                )}
+              </>
             ) : (
               <CalendarView games={games} onGameClick={(game) => setSelectedGame(game)} />
             )}
@@ -1560,6 +1614,99 @@ export default function App() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : view === "courts" ? (
+          <div className="flex flex-col gap-4">
+            <div>
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Courts in Taichung</h2>
+              <p className="text-xs text-gray-300">Tap a court to open in Google Maps</p>
+            </div>
+
+            {[
+              {
+                name: "Pickle Park 匹克公園",
+                area: "Beitun District, North Taichung",
+                type: "Indoor",
+                courts: 2,
+                price: "NT$600/hr (off-peak) · NT$800/hr (peak)",
+                hours: "Mon–Fri 09:00–18:00 off-peak · Mon–Fri 18:00–23:00 peak · Weekends 09:00–23:00 peak",
+                notes: "Book in advance. Non-marking shoes required.",
+                mapUrl: "https://www.google.com/maps/place/PicklePark+匹克公園室內匹克球場+北屯場/@24.1902471,120.6772832,17z",
+                color: "#1e3a5f",
+              },
+              {
+                name: "Pickle King 匹克王",
+                area: "Taichung City",
+                type: "Indoor",
+                courts: 6,
+                price: "NT$1,000–1,200/hr (2 premium courts with social zone at NT$1,200)",
+                hours: "Daily 09:00–22:00",
+                notes: "Professional competition-grade venue. 2 courts include a player lounge area.",
+                mapUrl: "https://www.google.com/maps/place/匹克王+PICKLE+KING｜匹克球運動餐廳/@24.1477486,120.6219843,17z",
+                color: "#7c3aed",
+              },
+              {
+                name: "LaLa Dink",
+                area: "Nantun District · 文心南三路996巷1號",
+                type: "Indoor",
+                courts: null,
+                price: "NT$150/2hrs (trial) · NT$200+/2hrs regular",
+                hours: "By reservation only",
+                notes: "Food & drinks available. All ages welcome. Lessons and clinics available.",
+                mapUrl: "https://www.google.com/maps/place/LaLa+Dink+|+Pickleball+club+匹克球俱樂部/@24.1347622,120.636987,17z",
+                color: "#059669",
+              },
+            ].map((court, i) => (
+              <a key={i} href={court.mapUrl} target="_blank" rel="noopener noreferrer"
+                className="bg-white rounded-2xl overflow-hidden block active:scale-[0.99] transition-all"
+                style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                <div className="h-1.5" style={{ background: court.color }} />
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-base leading-tight">{court.name}</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">📍 {court.area}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-50 text-gray-500 border border-gray-100">
+                        {court.type}
+                      </span>
+                      {court.courts && (
+                        <span className="text-xs text-gray-400">{court.courts} courts</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5 text-xs text-gray-500 mb-3">
+                    <div className="flex items-start gap-2">
+                      <span className="flex-shrink-0">💵</span>
+                      <span>{court.price}</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="flex-shrink-0">🕐</span>
+                      <span>{court.hours}</span>
+                    </div>
+                    {court.notes && (
+                      <div className="flex items-start gap-2">
+                        <span className="flex-shrink-0">💡</span>
+                        <span>{court.notes}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-300">Tap to open in Maps</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                      <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                  </div>
+                </div>
+              </a>
+            ))}
+
+            <div className="rounded-2xl border-2 border-dashed border-gray-200 p-5 text-center">
+              <p className="text-sm font-semibold text-gray-500 mb-1">Know a court we're missing?</p>
+              <p className="text-xs text-gray-400">Message us on LINE and we'll add it.</p>
+            </div>
           </div>
         ) : view === "about" ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
