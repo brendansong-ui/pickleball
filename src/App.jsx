@@ -2122,13 +2122,13 @@ export default function App() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung</h2>
             <p className="text-sm text-gray-500 leading-relaxed mb-4">
-              Your home for everything pickleball in Taichung — and beyond.
+              Pickleball is one of the fastest-growing sports in the world right now — and Taiwan is no exception. Taichung even hosted the 2024 Asia Pickleball Games, putting our city firmly on the map.
               <br /><br />
-              Browse upcoming games and grab your spot. Get up to speed on the rules in the Learn tab. Watch tutorials and tips in the Watch tab. Discover courts around the city in the Courts tab.
+              Whether you're a total beginner or already chasing your DUPR rating, this is the place to find your next game, discover courts around the city, and connect with fellow players.
               <br /><br />
-              Want to host a game? Sign in with your LINE account, set up your session, and let the community come to you.
+              Browse games in the Play tab. Learn the rules in Learn. Watch tutorials in Watch. Find courts in Courts.
               <br /><br />
-              Built by the community, for the community. See you on the court.
+              Sign in with LINE to host or join a game. See you on the court.
             </p>
           </div>
         ) : null}
