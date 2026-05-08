@@ -2029,14 +2029,22 @@ export default function App() {
             </div>
 
             {/* What is Pickleball */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-base font-black text-gray-900 mb-3">What is Pickleball?</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                Pickleball is a racket sport that combines elements of tennis, badminton, and table tennis. It's played on a small court with a solid paddle and a perforated plastic ball. The sport is easy to learn, low-impact, and suitable for all ages and fitness levels.
-              </p>
-              <p className="text-sm text-gray-500 leading-relaxed mt-3">
-                The court is about a quarter of the size of a tennis court, making rallies faster and more fun. Points are only scored by the serving team, and the first team to reach 11 points (win by 2) wins the game.
-              </p>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <img
+                src="https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&auto=format&fit=crop&q=80"
+                alt="Pickleball paddle and ball"
+                className="w-full h-40 object-cover"
+                onError={(e) => e.target.style.display="none"}
+              />
+              <div className="p-5">
+                <h3 className="text-base font-black text-gray-900 mb-3">What is Pickleball?</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  Pickleball is a racket sport that combines elements of tennis, badminton, and table tennis. It's played on a small court with a solid paddle and a perforated plastic ball. The sport is easy to learn, low-impact, and suitable for all ages and fitness levels.
+                </p>
+                <p className="text-sm text-gray-500 leading-relaxed mt-3">
+                  The court is about a quarter of the size of a tennis court, making rallies faster and more fun. Points are only scored by the serving team, and the first team to reach 11 points (win by 2) wins the game.
+                </p>
+              </div>
             </div>
 
             {/* Basic Rules */}
@@ -2090,8 +2098,7 @@ export default function App() {
                   <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
                 </svg>
               </div>
-              <p className="text-sm font-bold text-gray-700 mb-1">Find a Coach</p>
-              <p className="text-xs text-gray-400 mb-3">Find English-speaking pickleball coaches in Taichung</p>
+              <p className="text-sm font-bold text-gray-700 mb-3">Find a Coach</p>
               <span className="text-xs font-bold px-3 py-1.5 rounded-full text-blue-600 bg-blue-50">Coming Soon</span>
             </div>
 
@@ -2140,17 +2147,24 @@ export default function App() {
         ) : view === "courts" ? (
           <CourtsTab user={user} token={token} />
         ) : view === "about" ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung</h2>
-            <p className="text-sm text-gray-500 leading-relaxed mb-4">
-              Pickleball is one of the fastest-growing sports in the world right now — and Taiwan is no exception. Taichung even hosted the 2024 Asia Pickleball Games, putting our city firmly on the map.
-              <br /><br />
-              Whether you're a total beginner or already chasing your DUPR rating, this is the place to find your next game, discover courts around the city, and connect with fellow players.
-              <br /><br />
-              Browse games in the Play tab. Learn the rules in Learn. Watch tutorials in Watch. Find courts in Courts.
-              <br /><br />
-              Sign in with LINE to host or join a game. See you on the court.
-            </p>
+          <div className="flex flex-col gap-4">
+            {/* Hero with logo */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center text-center">
+              <img src="/logo.png" alt="Pickleball Taichung" className="w-24 h-24 object-contain mb-4" />
+              <h2 className="text-xl font-black text-gray-900 mb-1">Pickleball Taichung</h2>
+              <p className="text-xs text-gray-400 tracking-wide">Community · Play · Learn</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Pickleball is one of the fastest-growing sports in the world right now — and Taiwan is no exception. Taichung even hosted the 2024 Asia Pickleball Games, putting our city firmly on the map.
+                <br /><br />
+                Whether you're a total beginner or already chasing your DUPR rating, this is the place to find your next game, discover courts around the city, and connect with fellow players.
+                <br /><br />
+                Browse games in the Play tab. Learn the rules in Learn. Watch tutorials in Watch. Find courts in Courts.
+                <br /><br />
+                Sign in with LINE to host or join a game. See you on the court.
+              </p>
+            </div>
           </div>
         ) : null}
       </main>
