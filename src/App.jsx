@@ -373,7 +373,7 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
       </button>
       <div className="flex items-center gap-2 flex-shrink-0">
         {player.duprRating != null && (
-          <span className={`text-xs font-bold ${ratingColor(player.duprRating)}`}>
+          <span className="text-xs font-bold text-blue-500">
             DUPR {Number(player.duprRating).toFixed(2)}
           </span>
         )}
