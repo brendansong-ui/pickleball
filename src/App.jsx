@@ -967,12 +967,15 @@ function GameCard({ game, onClick, isPinned, onTogglePin }) {
             )}
           </div>
 
-          <button
-            onClick={(e) => { e.stopPropagation(); onClick(); }}
-            className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
-            style={{ background: isFull ? "linear-gradient(135deg, #d97706, #f59e0b)" : "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-            {isFull ? "Join Waitlist" : "Register"}
-          </button>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-xs text-gray-300">Tap card for details</p>
+            <button
+              onClick={(e) => { e.stopPropagation(); onClick(); }}
+              className="text-xs font-bold px-4 py-1.5 rounded-full transition-all active:scale-95 text-white"
+              style={{ background: isFull ? "linear-gradient(135deg, #d97706, #f59e0b)" : "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+              {isFull ? "Waitlist" : "Register →"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1911,10 +1914,19 @@ export default function App() {
           <div className="flex gap-0.5 bg-gray-100 rounded-xl p-1 w-full">
             {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "watch", label: "Watch" }, { id: "courts", label: "Courts" }, { id: "about", label: "About" }].map((v) => (
               <button key={v.id} onClick={() => setView(v.id)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  view === v.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                }`}>
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all relative ${
+                  view === v.id
+                    ? v.id === "games" ? "text-white shadow-sm" : "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
+                }`}
+                style={view === v.id && v.id === "games" ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : {}}>
                 {v.label}
+                {v.id === "games" && upcomingGames.length > 0 && view !== "games" && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white flex items-center justify-center font-bold leading-none"
+                    style={{ fontSize: 9, background: "#06C755" }}>
+                    {upcomingGames.length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -1936,6 +1948,41 @@ export default function App() {
           </div>
         ) : view === "games" ? (
           <>
+            {/* Next Up hero card */}
+            {sorted.length > 0 && playView === "list" && (() => {
+              const next = sorted[0];
+              const isFull = next.players.length >= next.maxPlayers;
+              const gameDate = new Date(next.date + "T" + next.time);
+              const now = new Date();
+              const diffMs = gameDate - now;
+              const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+              const diffDays = Math.floor(diffHours / 24);
+              const timeLabel = diffDays === 0 ? "Today" : diffDays === 1 ? "Tomorrow" : `In ${diffDays} days`;
+              return (
+                <button onClick={() => setSelectedGame(next)}
+                  className="w-full text-left rounded-2xl overflow-hidden mb-4 active:scale-[0.99] transition-all"
+                  style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)", boxShadow: "0 4px 12px rgba(30,58,95,0.25)" }}>
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-bold text-blue-300 uppercase tracking-widest">Next Up</span>
+                      <span className="text-xs font-bold text-white bg-white/20 px-2.5 py-1 rounded-full">{timeLabel}</span>
+                    </div>
+                    <h3 className="text-lg font-black text-white leading-tight mb-1">{next.title}</h3>
+                    <p className="text-xs text-blue-200 mb-3">📍 {next.location}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-3 text-xs text-blue-200">
+                        <span>⏰ {displayTime(next.time)}{next.endTime ? `–${displayTime(next.endTime)}` : ""}</span>
+                        <span>{next.price > 0 ? `NT$${Number(next.price).toFixed(0)}` : "Free"}</span>
+                      </div>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${isFull ? "bg-red-400/30 text-red-200" : "bg-white/20 text-white"}`}>
+                        {isFull ? "Full" : `${next.players.length}/${next.maxPlayers} joined`}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })()}
+
             {/* List / Calendar toggle */}
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Upcoming Games</h2>
@@ -2031,7 +2078,7 @@ export default function App() {
             {/* What is Pickleball */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <img
-                src="https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&auto=format&fit=crop&q=80"
+                src="https://images.unsplash.com/photo-1693044059603-d3f0d3c99c7c?w=800&auto=format&fit=crop&q=80"
                 alt="Pickleball paddle and ball"
                 className="w-full h-40 object-cover"
                 onError={(e) => e.target.style.display="none"}
