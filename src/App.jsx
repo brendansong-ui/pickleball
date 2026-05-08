@@ -1270,7 +1270,7 @@ export default function App() {
                 </svg>
               </div>
               <p className="text-sm font-bold text-gray-700 mb-1">Find a Coach</p>
-              <p className="text-xs text-gray-400 mb-3">Connect with certified pickleball coaches in Taichung</p>
+              <p className="text-xs text-gray-400 mb-3">Find English-speaking pickleball coaches in Taichung</p>
               <span className="text-xs font-bold px-3 py-1.5 rounded-full text-blue-600 bg-blue-50">Coming Soon</span>
             </div>
 
