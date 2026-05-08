@@ -917,6 +917,7 @@ function GameFormModal({ game, onClose, onSave }) {
     endTimeMin: game?.endTime ? game.endTime.split(":")[1] || "00" : "",
     location: game?.location || "",
     locationUrl: game?.location_url || "",
+    locationPreset: "",
     maxPlayers: game?.maxPlayers || 8,
     courts: game?.courts || 1,
     price: game?.price ?? "",
@@ -1035,21 +1036,58 @@ function GameFormModal({ game, onClose, onSave }) {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Location Name</label>
-              <input type="text" placeholder="e.g. Zhongshan Park Court 3" value={form.location}
-                onChange={(e) => update("location", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Location</label>
+              <select
+                value={form.locationPreset || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  update("locationPreset", val);
+                  if (val === "custom" || val === "") {
+                    update("location", "");
+                    update("locationUrl", "");
+                  } else {
+                    const court = COURTS.find(c => c.name === val);
+                    if (court) {
+                      update("location", court.name);
+                      update("locationUrl", court.mapUrl);
+                    }
+                  }
+                }}
+                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 bg-white">
+                <option value="">Select a venue...</option>
+                {COURTS.map(c => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+                <option value="custom">Other / Custom Location</option>
+              </select>
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
-                Google Maps Link <span className="normal-case font-normal text-gray-300">(optional)</span>
-              </label>
-              <input type="url" placeholder="Paste Google Maps URL here" value={form.locationUrl}
-                onChange={(e) => update("locationUrl", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
-              <p className="text-xs text-gray-300 mt-1">Open Google Maps, find the place, copy the URL and paste here.</p>
-            </div>
+            {(form.locationPreset === "custom" || !form.locationPreset) && (
+              <>
+                <div>
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Location Name</label>
+                  <input type="text" placeholder="e.g. Zhongshan Park Court 3" value={form.location}
+                    onChange={(e) => update("location", e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                    Google Maps Link <span className="normal-case font-normal text-gray-300">(optional)</span>
+                  </label>
+                  <input type="url" placeholder="Paste Google Maps URL here" value={form.locationUrl}
+                    onChange={(e) => update("locationUrl", e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+                  <p className="text-xs text-gray-300 mt-1">Open Google Maps, find the place, copy the URL and paste here.</p>
+                </div>
+              </>
+            )}
+
+            {form.locationPreset && form.locationPreset !== "custom" && (
+              <div className="bg-blue-50 rounded-xl px-3 py-2.5 flex items-center gap-2 text-xs text-blue-600">
+                <span>📍</span>
+                <span>{form.location} — Google Maps link auto-filled</span>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <div className="flex-1">
