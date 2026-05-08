@@ -359,10 +359,14 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
 
   return (
     <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
-      <button className="flex items-center gap-2.5 flex-1 min-w-0 text-left" onClick={() => player.userId && onViewProfile && onViewProfile(player.userId)}>
+      <button className="flex items-center gap-2.5 flex-1 min-w-0 text-left" onClick={() => {
+        if (player.userId && onViewProfile) {
+          onViewProfile(player.userId);
+        }
+      }}>
         <Avatar url={player.avatarUrl} name={player.name} size={7} />
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-sm font-medium text-gray-700">{player.name}</span>
+          <span className={`text-sm font-medium ${player.userId ? "text-gray-700" : "text-gray-500"}`}>{player.name}</span>
           {player.isHost && <span className="text-xs font-bold text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full">Host</span>}
           {isWaitlist && <span className="text-xs text-amber-500 font-semibold">#{index + 1} waitlist</span>}
         </div>
@@ -429,27 +433,26 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile, onSig
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm">
-        {/* Banner — tall enough for avatar to overlap nicely */}
-        <div className="h-28 rounded-t-3xl relative" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+        {/* Banner with avatar sitting at the bottom */}
+        <div className="relative pb-10" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)", height: 100 }}>
           <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/20 text-white text-sm">✕</button>
+          {/* Avatar anchored to bottom-left of banner */}
+          <div className="absolute -bottom-10 left-5 ring-4 ring-white rounded-full bg-white">
+            <Avatar url={avatarUrl} name={name} size={20} />
+          </div>
         </div>
 
-        <div className="px-5 pb-5">
-          {/* Avatar — pulled up to overlap the banner */}
-          <div className="flex items-end justify-between mb-3" style={{ marginTop: -40 }}>
-            <div className="ring-4 ring-white rounded-full" style={{ background: "white" }}>
-              <Avatar url={avatarUrl} name={name} size={20} />
+        <div className="px-5 pb-5 pt-12">
+          {/* Edit button aligned to right */}
+          {isOwnProfile && !editing && (
+            <div className="flex justify-end mb-2">
+              <button onClick={() => setEditing(true)}
+                className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+                Edit
+              </button>
             </div>
-            <div className="flex items-center gap-2" style={{ marginTop: 48 }}>
-              {isOwnProfile && !editing && (
-                <button onClick={() => setEditing(true)}
-                  className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
-                  Edit
-                </button>
-              )}
-            </div>
-          </div>
+          )}
 
           {loading ? (
             <div className="text-center py-6 text-gray-300 text-sm">Loading...</div>
@@ -514,9 +517,6 @@ function RegisterModal({ game, onRegister, onClose, user }) {
   const isFull = game.players.length >= game.maxPlayers;
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "";
   const avatarUrl = user?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null;
-  console.log("RegisterModal user:", JSON.stringify(user?.user_metadata));
-  console.log("RegisterModal avatarUrl:", avatarUrl);
-  console.log("sessionStorage line_avatar_url:", sessionStorage.getItem("line_avatar_url"));
   const [duprRating, setDuprRating] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -1318,7 +1318,6 @@ export default function App() {
       )}
 
       <header className="bg-white sticky top-0 z-10" style={{ boxShadow: "0 1px 0 rgba(0,0,0,0.06)" }}>
-        {/* Top row: logo + tabs + avatar */}
         <div className="max-w-2xl mx-auto px-4 pt-3 pb-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 flex-shrink-0">
             <img src="/logo.png" alt="Taichung Pickleball Community" className="w-8 h-8 object-contain" />
@@ -1336,22 +1335,22 @@ export default function App() {
               ))}
             </div>
             {user ? (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 {isAdmin && (
                   <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Admin</span>
                 )}
-                <button onClick={() => setProfileUserId(user.id)} className="focus:outline-none">
+                <button onClick={() => setProfileUserId(user.id)} className="focus:outline-none flex-shrink-0">
                   <Avatar url={user.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url")} name={user.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || user.email} size={8} className="ring-2 ring-white shadow-sm" />
                 </button>
               </div>
             ) : (
               <button onClick={() => signInWithLINE()}
-                className="flex items-center gap-1.5 text-white text-xs font-bold px-3 py-2 rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-sm flex-shrink-0"
+                className="flex-shrink-0 flex items-center gap-1 text-white text-xs font-bold px-2.5 py-2 rounded-xl active:scale-95 transition-all"
                 style={{ background: "#06C755" }}>
                 <svg width="11" height="11" viewBox="0 0 48 48" fill="white">
                   <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
                 </svg>
-                Sign in with LINE
+                Sign in
               </button>
             )}
           </div>
