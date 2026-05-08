@@ -642,7 +642,8 @@ function GameCard({ game, onClick }) {
 
   return (
     <div onClick={onClick}
-      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden active:scale-[0.99] transition-all cursor-pointer">
+      className="bg-white rounded-2xl overflow-hidden active:scale-[0.99] transition-all cursor-pointer"
+      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)" }}>
       <div className="h-1" style={{ background: isFull ? "#f87171" : pct >= 0.75 ? "#fbbf24" : "#4ade80" }} />
       <div className="p-4">
         <div className="flex items-start justify-between gap-3 mb-2">
@@ -1064,7 +1065,7 @@ export default function App() {
   const sorted = [...games].sort((a, b) => new Date(a.date) - new Date(b.date));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: "#f8f9fb" }}>
       {gameForm !== null && (
         <GameFormModal game={gameForm?.id ? gameForm : null} onClose={() => setGameForm(null)} onSave={handleSaveGame} />
       )}
@@ -1084,25 +1085,25 @@ export default function App() {
         />
       )}
 
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 pt-3 pb-2 flex items-center justify-between">
+      <header className="bg-white sticky top-0 z-10" style={{ boxShadow: "0 1px 0 rgba(0,0,0,0.06)" }}>
+        <div className="max-w-2xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Taichung Pickleball Community" className="w-9 h-9 object-contain" />
             <div>
               <h1 className="font-black text-gray-900 text-sm leading-tight tracking-tight">Pickleball Taichung</h1>
-              <p className="text-xs text-gray-400">Find & join games</p>
+              <p className="text-xs text-gray-400 tracking-wide">Community · Play · Learn</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {user ? (
               <>
                 {user.user_metadata?.avatar_url && (
-                  <img src={user.user_metadata.avatar_url} className="w-7 h-7 rounded-full" alt=""
+                  <img src={user.user_metadata.avatar_url} className="w-8 h-8 rounded-full ring-2 ring-white shadow-sm" alt=""
                     onError={(e) => e.target.style.display="none"} />
                 )}
               </>
             ) : (
-              <button onClick={() => setShowAdminLogin(true)} className="text-gray-300 hover:text-gray-500 text-base px-1" title="Admin">⚙️</button>
+              <button onClick={() => setShowAdminLogin(true)} className="text-gray-200 hover:text-gray-400 text-base px-1 transition-colors" title="Admin">⚙️</button>
             )}
           </div>
         </div>
@@ -1110,25 +1111,26 @@ export default function App() {
         <div className="max-w-2xl mx-auto px-4 pb-3 flex items-center gap-2">
           {user ? (
             <button onClick={() => setGameForm({})}
-              className="text-white text-sm font-bold px-4 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
-              style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-              + Host Game
+              className="text-white text-xs font-bold px-4 py-2 rounded-xl hover:opacity-90 flex-shrink-0 active:scale-95 transition-all shadow-sm"
+              style={{ background: "#06C755" }}>
+              + Host a Game
             </button>
           ) : (
             <button onClick={() => signInWithLINE()}
-              className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl hover:opacity-90 shadow-sm flex-shrink-0 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 text-white text-xs font-bold px-4 py-2 rounded-xl hover:opacity-90 flex-shrink-0 active:scale-95 transition-all shadow-sm"
               style={{ background: "#06C755" }}>
-              <svg width="13" height="13" viewBox="0 0 48 48" fill="white">
-                <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4zm-6.5 22.5h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm3 0a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v8a1 1 0 0 1-1 1zm9 0h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm5-3.5h-3v-1.5h3a1 1 0 0 1 0 2zm0-3h-3V18.5h3a1 1 0 0 1 0 2z"/>
+              <svg width="12" height="12" viewBox="0 0 48 48" fill="white">
+                <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
               </svg>
-              Host a Game
+              Sign in to host
             </button>
           )}
-          <div className="flex gap-1 ml-auto">
-            {[{ id: "games", label: "Games" }, { id: "about", label: "About" }].map((v) => (
+          <div className="flex gap-0.5 ml-auto bg-gray-100 rounded-xl p-1">
+            {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "about", label: "About" }].map((v) => (
               <button key={v.id} onClick={() => setView(v.id)}
-                className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${view === v.id ? "text-white" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}`}
-                style={view === v.id ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : {}}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  view === v.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                }`}>
                 {v.label}
               </button>
             ))}
@@ -1162,7 +1164,118 @@ export default function App() {
                 </div>
             }
           </>
-        ) : (
+        ) : view === "learn" ? (
+          <div className="flex flex-col gap-6">
+
+            {/* Hero */}
+            <div className="rounded-2xl overflow-hidden relative" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+              <div className="p-6">
+                <p className="text-xs font-bold text-blue-300 uppercase tracking-widest mb-1">Learn Pickleball</p>
+                <h2 className="text-2xl font-black text-white leading-tight mb-2">New to the game?</h2>
+                <p className="text-sm text-blue-200 leading-relaxed">Everything you need to get on the court with confidence.</p>
+              </div>
+            </div>
+
+            {/* What is Pickleball */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="text-base font-black text-gray-900 mb-3">What is Pickleball?</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Pickleball is a racket sport that combines elements of tennis, badminton, and table tennis. It's played on a small court with a solid paddle and a perforated plastic ball. The sport is easy to learn, low-impact, and suitable for all ages and fitness levels.
+              </p>
+              <p className="text-sm text-gray-500 leading-relaxed mt-3">
+                The court is about a quarter of the size of a tennis court, making rallies faster and more fun. Points are only scored by the serving team, and the first team to reach 11 points (win by 2) wins the game.
+              </p>
+            </div>
+
+            {/* Basic Rules */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="text-base font-black text-gray-900 mb-4">Basic Rules</h3>
+              <div className="flex flex-col gap-3">
+                {[
+                  { title: "The Kitchen", desc: "The 7-foot zone on each side of the net is called the Non-Volley Zone (NVZ) or 'kitchen'. You cannot volley the ball while standing in it." },
+                  { title: "The Two-Bounce Rule", desc: "After the serve, the ball must bounce once on each side before either team can volley. This prevents rushing the net on the serve." },
+                  { title: "Serving", desc: "Serves must be underhand and hit diagonally to the opponent's service box. The ball must clear the kitchen and land in bounds." },
+                  { title: "Scoring", desc: "Only the serving team can score points. Games are played to 11 points, win by 2. In tournaments, games may go to 15 or 21." },
+                  { title: "Faults", desc: "Hitting into the net, out of bounds, volleying from the kitchen, or not letting the ball bounce when required are all faults." },
+                ].map((rule, i) => (
+                  <div key={i} className="flex gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-black mt-0.5"
+                      style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>{i + 1}</div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">{rule.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{rule.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Video Tutorials */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="text-base font-black text-gray-900 mb-1">Video Tutorials</h3>
+              <p className="text-xs text-gray-400 mb-4">Watch and learn the essential shots</p>
+              <div className="flex flex-col gap-3">
+                {[
+                  { title: "How to Serve", channel: "Pickleball Channel", id: "aGzPUvVSDBs" },
+                  { title: "The Dink Shot", channel: "Pickleball Channel", id: "Ec3Nj_JnNmU" },
+                  { title: "Third Shot Drop", channel: "Pickleball Kitchen", id: "7m5oMKbWkYA" },
+                  { title: "Volley Technique", channel: "Tyson McGuffin", id: "sNJk2VJ-pFE" },
+                ].map((video, i) => (
+                  <a key={i} href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: "linear-gradient(135deg, #ff0000, #cc0000)" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 leading-tight">{video.title}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{video.channel} · YouTube</p>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Glossary */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="text-base font-black text-gray-900 mb-4">Common Terms</h3>
+              <div className="flex flex-col gap-2">
+                {[
+                  { term: "Dink", def: "A soft shot that lands in or near the kitchen, forcing the opponent to hit upward." },
+                  { term: "Kitchen", def: "The Non-Volley Zone (NVZ) — the 7-foot area closest to the net on each side." },
+                  { term: "Erne", def: "An advanced shot where you jump around the kitchen post to volley the ball." },
+                  { term: "Lob", def: "A high, deep shot intended to go over the opponent's head when they're at the net." },
+                  { term: "Stacking", def: "A doubles strategy where both players position themselves on the same side of the court." },
+                  { term: "Bangers", def: "Players who prefer to hit hard drives instead of playing the soft dinking game." },
+                  { term: "ATP", def: "Around the Post — hitting the ball around the net post instead of over it. Legal and impressive." },
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-3 py-2 border-b border-gray-50 last:border-0">
+                    <span className="text-sm font-bold text-blue-800 w-20 flex-shrink-0">{item.term}</span>
+                    <span className="text-sm text-gray-500 leading-relaxed">{item.def}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Find a Coach — Coming Soon */}
+            <div className="rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center">
+              <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+                  <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                </svg>
+              </div>
+              <p className="text-sm font-bold text-gray-700 mb-1">Find a Coach</p>
+              <p className="text-xs text-gray-400 mb-3">Connect with certified pickleball coaches in Taichung</p>
+              <span className="text-xs font-bold px-3 py-1.5 rounded-full text-blue-600 bg-blue-50">Coming Soon</span>
+            </div>
+
+          </div>
+        ) : view === "about" ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung!</h2>
             <p className="text-sm text-gray-500 leading-relaxed mb-4">
