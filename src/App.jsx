@@ -1232,7 +1232,7 @@ const COURTS = [
   {
     name: "Pickle Park 匹克公園",
     district: "Beitun",
-    area: "Beitun District · North Taichung",
+    area: "Beitun District · No. 125, Dunhe Road, Renhe Village",
     type: "Indoor",
     courts: 2,
     price: "NT$600/hr (off-peak) · NT$800/hr (peak)",
@@ -1254,7 +1254,7 @@ const COURTS = [
   {
     name: "Pickle King 匹克王",
     district: "Nantun",
-    area: "Nantun District · Near Highway 74",
+    area: "Nantun District · No. 2, Section 4, Huanzhong Rd, Xinsheng Village",
     type: "Indoor",
     courts: 6,
     price: "NT$1,000–1,200/hr (2 premium courts with social zone at NT$1,200)",
@@ -1279,7 +1279,7 @@ const COURTS = [
   {
     name: "LaLa Dink",
     district: "Nantun",
-    area: "Nantun District · 文心南三路996巷1號",
+    area: "Nantun District · No. 1, Lane 996, Wenxin South 3rd Road, Fengle Village",
     type: "Indoor",
     courts: 6,
     price: "NT$600–1,200/hr depending on time · Weekday mornings cheapest, weekends & evenings most expensive",
