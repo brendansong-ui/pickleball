@@ -384,7 +384,7 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
   );
 }
 
-function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile }) {
+function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile, onSignOut }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -422,22 +422,32 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
-        <div className="h-20 relative" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm">
+        {/* Banner */}
+        <div className="h-24 rounded-t-3xl relative" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
           <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/20 text-white text-sm">✕</button>
         </div>
 
         <div className="px-5 pb-5">
-          <div className="flex items-end justify-between -mt-8 mb-3">
-            <div className="ring-4 ring-white rounded-full">
+          {/* Avatar overlapping banner — use negative margin but no overflow-hidden on parent */}
+          <div className="flex items-end justify-between mb-3" style={{ marginTop: -32 }}>
+            <div className="ring-4 ring-white rounded-full bg-white">
               <Avatar url={avatarUrl} name={name} size={16} />
             </div>
-            {isOwnProfile && !editing && (
-              <button onClick={() => setEditing(true)}
-                className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
-                Edit Profile
-              </button>
-            )}
+            <div className="flex items-center gap-2 mt-8">
+              {isOwnProfile && !editing && (
+                <button onClick={() => setEditing(true)}
+                  className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+                  Edit
+                </button>
+              )}
+              {isOwnProfile && onSignOut && (
+                <button onClick={onSignOut}
+                  className="text-xs font-semibold text-red-400 bg-red-50 px-3 py-1.5 rounded-full">
+                  Sign Out
+                </button>
+              )}
+            </div>
           </div>
 
           {loading ? (
@@ -1275,6 +1285,14 @@ export default function App() {
           token={token}
           isOwnProfile={user?.id === profileUserId}
           onClose={() => setProfileUserId(null)}
+          onSignOut={async () => {
+            await signOut(token);
+            sessionStorage.removeItem("sb_token");
+            sessionStorage.removeItem("sb_refresh");
+            sessionStorage.removeItem("line_display_name");
+            sessionStorage.removeItem("line_avatar_url");
+            setUser(null); setToken(null); setIsAdmin(false); setProfileUserId(null);
+          }}
         />
       )}
       {gameForm !== null && (
