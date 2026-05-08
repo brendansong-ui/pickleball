@@ -524,8 +524,10 @@ function RegisterModal({ game, onRegister, onClose, user }) {
   const avatarUrl = user?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [agreed, setAgreed] = useState(false);
 
   async function handleSubmit() {
+    if (!agreed) { setError("Please acknowledge the house rules before registering."); return; }
     setLoading(true);
     setError("");
     try {
@@ -537,41 +539,78 @@ function RegisterModal({ game, onRegister, onClose, user }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h2 className="text-base font-bold text-gray-900">{isFull ? "Join Waitlist" : "Join Game"}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{game.title}</p>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[92vh] overflow-y-auto overscroll-contain">
+        <div className="p-6">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">{isFull ? "Join Waitlist" : "Join Game"}</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{game.title}</p>
+            </div>
+            <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-xl leading-none mt-0.5">✕</button>
           </div>
-          <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-xl leading-none mt-0.5">✕</button>
-        </div>
 
-        {isFull && (
-          <div className="mb-4 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 text-xs text-amber-600">
-            This game is full. You'll be added to the waitlist.
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-3 mb-4">
-          {avatarUrl ? (
-            <img src={avatarUrl} className="w-9 h-9 rounded-full object-cover" alt="" onError={(e) => e.target.style.display="none"} />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
-              {displayName.charAt(0).toUpperCase()}
+          {isFull && (
+            <div className="mb-4 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 text-xs text-amber-600">
+              This game is full. You'll be added to the waitlist.
             </div>
           )}
-          <div>
-            <p className="text-sm font-semibold text-gray-800">{displayName}</p>
-            <p className="text-xs text-gray-400">Registering as this account</p>
-          </div>
-        </div>
 
-        {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
-        <button onClick={handleSubmit} disabled={loading}
-          className="w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-50"
-          style={{ background: isFull ? "linear-gradient(135deg, #d97706, #f59e0b)" : "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-          {loading ? "Saving..." : isFull ? "Join Waitlist" : "Confirm Registration"}
-        </button>
+          <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-3 mb-4">
+            {avatarUrl ? (
+              <img src={avatarUrl} className="w-9 h-9 rounded-full object-cover" alt="" onError={(e) => e.target.style.display="none"} />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-semibold text-gray-800">{displayName}</p>
+              <p className="text-xs text-gray-400">Registering as this account</p>
+            </div>
+          </div>
+
+          {/* House rules */}
+          <div className="bg-gray-50 rounded-2xl p-4 mb-4">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">House Rules</p>
+            <div className="flex flex-col gap-2">
+              {[
+                "Only sign up if you're planning to come.",
+                "Cancel at least 24 hours before the game. Late cancellations mean you'll be asked to cover the session fee next time.",
+                "Settle court fees in cash with the host before the game starts.",
+                "Arrive 10 minutes early. Games start on time.",
+                "Be kind and encouraging. All levels are welcome.",
+                "No-shows without notice will be recorded. Two strikes and your LINE account will be blacklisted.",
+              ].map((rule, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
+                  <span className="flex-shrink-0 font-bold text-gray-400">{i + 1}.</span>
+                  <span>{rule}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Acknowledgement checkbox */}
+          <button onClick={() => setAgreed(v => !v)}
+            className="flex items-start gap-3 w-full text-left mb-4">
+            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+              agreed ? "border-blue-500 bg-blue-500" : "border-gray-300"
+            }`}>
+              {agreed && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              )}
+            </div>
+            <p className="text-xs text-gray-600 leading-relaxed">I have read and agree to the house rules above.</p>
+          </button>
+
+          {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
+          <button onClick={handleSubmit} disabled={loading || !agreed}
+            className="w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-40 transition-opacity"
+            style={{ background: isFull ? "linear-gradient(135deg, #d97706, #f59e0b)" : "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+            {loading ? "Saving..." : isFull ? "Join Waitlist" : "Confirm Registration"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -2081,35 +2120,16 @@ export default function App() {
           <CourtsTab user={user} token={token} />
         ) : view === "about" ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung!</h2>
+            <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung</h2>
             <p className="text-sm text-gray-500 leading-relaxed mb-4">
-              Your home for everything pickleball in Taichung. Whether you're here to find a game, learn the sport, or connect with fellow players — you're in the right place.
+              Your home for everything pickleball in Taichung — and beyond.
               <br /><br />
-              Browse upcoming games and grab your spot. Pick up tips and rules in the Learn tab. Watch tutorials and highlights in the Watch tab.
+              Browse upcoming games and grab your spot. Get up to speed on the rules in the Learn tab. Watch tutorials and tips in the Watch tab. Discover courts around the city in the Courts tab.
               <br /><br />
-              Want to host a game? Sign in with LINE, set up your session, and let the community come to you.
+              Want to host a game? Sign in with your LINE account, set up your session, and let the community come to you.
               <br /><br />
-              Simple, fun, and built for the community. See you on the court.
+              Built by the community, for the community. See you on the court.
             </p>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">A few house rules to keep things fun for everyone</p>
-            <div className="flex flex-col gap-2.5">
-              {[
-                "Only sign up if you're planning to come. Others are counting on a full court and your spot matters.",
-                "Need to cancel? Please do it at least 24 hours before the game. Late cancellations mean you'll be asked to cover the session fee next time you join.",
-                "Settle your court fees in cash with the host before the game starts. It keeps things smooth for everyone.",
-                "Arrive 10 minutes early. Games start on time and we want everyone warmed up and ready.",
-                "Be kind and encouraging. All levels are welcome here - cheer on the beginners and keep the vibe positive.",
-                "No-shows without a heads-up to the host will be noted. Two strikes and your LINE account will be blacklisted!",
-              ].map((rule, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white mt-0.5"
-                    style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-                    {i + 1}
-                  </span>
-                  <p className="text-sm text-gray-500 leading-relaxed">{rule}</p>
-                </div>
-              ))}
-            </div>
           </div>
         ) : null}
       </main>
