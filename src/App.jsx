@@ -1974,11 +1974,9 @@ export default function App() {
             {sorted.length > 0 && playView === "list" && (() => {
               const next = sorted[0];
               const isFull = next.players.length >= next.maxPlayers;
-              const gameDate = new Date(next.date + "T" + next.time);
               const now = new Date();
-              const diffMs = gameDate - now;
-              const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-              const diffDays = Math.floor(diffHours / 24);
+              const todayStr = now.toISOString().slice(0, 10);
+              const diffDays = Math.round((new Date(next.date) - new Date(todayStr)) / (1000 * 60 * 60 * 24));
               const timeLabel = diffDays === 0 ? "Today" : diffDays === 1 ? "Tomorrow" : `In ${diffDays} days`;
               return (
                 <button onClick={() => setSelectedGame(next)}
@@ -2101,22 +2099,14 @@ export default function App() {
             </div>
 
             {/* What is Pickleball */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <img
-                src="https://images.unsplash.com/photo-1693142518230-f049c9fc1ad2?w=800&auto=format&fit=crop&q=80"
-                alt="Pickleball paddle and ball"
-                className="w-full h-40 object-cover"
-                onError={(e) => e.target.style.display="none"}
-              />
-              <div className="p-5">
-                <h3 className="text-base font-black text-gray-900 mb-3">What is Pickleball?</h3>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="text-base font-black text-gray-900 mb-3">What is Pickleball?</h3>
                 <p className="text-sm text-gray-500 leading-relaxed">
                   Pickleball is a racket sport that combines elements of tennis, badminton, and table tennis. It's played on a small court with a solid paddle and a perforated plastic ball. The sport is easy to learn, low-impact, and suitable for all ages and fitness levels.
                 </p>
                 <p className="text-sm text-gray-500 leading-relaxed mt-3">
                   The court is about a quarter of the size of a tennis court, making rallies faster and more fun. Points are only scored by the serving team, and the first team to reach 11 points (win by 2) wins the game.
                 </p>
-              </div>
             </div>
 
             {/* Basic Rules */}
