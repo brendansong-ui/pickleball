@@ -1299,10 +1299,207 @@ const COURTS = [
 
 const DISTRICTS = ["All", "Beitun", "North", "West", "Central", "East", "South", "Nantun", "Xitun"];
 
-function CourtsTab() {
+async function fetchCourtReviews(courtId, token) {
+  try {
+    const data = await sbFetch(`court_reviews?court_id=eq.${courtId}&order=created_at.desc&select=*`, {}, token);
+    return data || [];
+  } catch { return []; }
+}
+
+async function submitCourtReview(courtId, comment, user, token) {
+  return sbFetch("court_reviews", {
+    method: "POST", prefer: "return=representation",
+    body: JSON.stringify({
+      court_id: courtId,
+      user_id: user.id,
+      display_name: user.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || user.email,
+      avatar_url: user.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null,
+      comment,
+    }),
+  }, token);
+}
+
+async function deleteCourtReview(reviewId, token) {
+  return sbFetch(`court_reviews?id=eq.${reviewId}`, { method: "DELETE" }, token);
+}
+
+function CourtDetailModal({ court, onClose, user, token }) {
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const courtId = court.name.replace(/\s+/g, "-").toLowerCase();
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    loadReviews();
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  async function loadReviews() {
+    setLoadingReviews(true);
+    const data = await fetchCourtReviews(courtId, token);
+    setReviews(data);
+    setLoadingReviews(false);
+  }
+
+  async function handleSubmit() {
+    if (!comment.trim()) { setError("Please write a comment."); return; }
+    if (comment.trim().length < 10) { setError("Please write at least 10 characters."); return; }
+    setSubmitting(true);
+    setError("");
+    try {
+      await submitCourtReview(courtId, comment.trim(), user, token);
+      setComment("");
+      await loadReviews();
+    } catch { setError("Something went wrong. Please try again."); }
+    setSubmitting(false);
+  }
+
+  async function handleDelete(reviewId) {
+    if (!window.confirm("Delete your review?")) return;
+    await deleteCourtReview(reviewId, token);
+    await loadReviews();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto overscroll-contain game-detail-scroll">
+        {/* Color bar */}
+        <div className="h-2 rounded-t-3xl" style={{ background: court.color }} />
+        <div className="p-5">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-xl font-black text-gray-900">{court.name}</h2>
+              <p className="text-xs text-gray-400 mt-0.5">📍 {court.area}</p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 text-lg flex-shrink-0">✕</button>
+          </div>
+
+          {/* Quick info */}
+          <div className="bg-gray-50 rounded-2xl p-4 flex flex-col gap-2 mb-4 text-xs text-gray-500">
+            <div className="flex items-start gap-2"><span>💵</span><span>{court.price}</span></div>
+            <div className="flex items-start gap-2"><span>🕐</span><span>{court.hours}</span></div>
+            <div className="flex items-center gap-2"><span>🏟</span><span>{court.type} · {court.courts} courts</span></div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 mb-5">
+            <a href={court.mapUrl} target="_blank" rel="noopener noreferrer"
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold text-center text-white"
+              style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+              Open in Maps
+            </a>
+            {court.bookingUrl && (
+              <a href={court.bookingUrl} target="_blank" rel="noopener noreferrer"
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-center text-white"
+                style={{ background: "#06C755" }}>
+                Book a Court
+              </a>
+            )}
+          </div>
+
+          {/* Highlights */}
+          {court.highlights?.length > 0 && (
+            <div className="mb-4">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Highlights</h3>
+              <div className="flex flex-col gap-2">
+                {court.highlights.map((h, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="text-green-500 flex-shrink-0 mt-0.5">✓</span><span>{h}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Good to know */}
+          {court.goodToKnow?.length > 0 && (
+            <div className="mb-5">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Good to Know</h3>
+              <div className="flex flex-col gap-2">
+                {court.goodToKnow.map((g, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="text-amber-500 flex-shrink-0 mt-0.5">!</span><span>{g}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reviews */}
+          <div className="mb-4">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+              Community Reviews {reviews.length > 0 && `(${reviews.length})`}
+            </h3>
+
+            {loadingReviews ? (
+              <p className="text-xs text-gray-300 text-center py-4">Loading reviews...</p>
+            ) : reviews.length === 0 ? (
+              <p className="text-sm text-gray-300 text-center py-4">No reviews yet. Be the first!</p>
+            ) : (
+              <div className="flex flex-col gap-3 mb-4">
+                {reviews.map((r) => (
+                  <div key={r.id} className="bg-gray-50 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Avatar url={r.avatar_url} name={r.display_name} size={7} />
+                        <div>
+                          <p className="text-xs font-semibold text-gray-700">{r.display_name}</p>
+                          <p className="text-xs text-gray-400">{new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                        </div>
+                      </div>
+                      {user?.id === r.user_id && (
+                        <button onClick={() => handleDelete(r.id)} className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50">✕</button>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 leading-relaxed">{r.comment}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Write review */}
+            {user ? (
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-semibold text-gray-500 mb-2">Leave a review</p>
+                <textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)}
+                  placeholder="Share your experience — what's great, what to watch out for..."
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 resize-none mb-2" />
+                {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+                <button onClick={handleSubmit} disabled={submitting}
+                  className="w-full py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+                  {submitting ? "Submitting..." : "Submit Review"}
+                </button>
+              </div>
+            ) : (
+              <div className="border-t border-gray-100 pt-4 text-center">
+                <p className="text-sm text-gray-500 mb-3">Sign in with LINE to leave a review</p>
+                <button onClick={signInWithLINE}
+                  className="flex items-center gap-2 text-white text-sm font-bold px-4 py-2 rounded-xl mx-auto"
+                  style={{ background: "#06C755" }}>
+                  <svg width="13" height="13" viewBox="0 0 48 48" fill="white">
+                    <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
+                  </svg>
+                  Sign in with LINE
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CourtsTab({ user, token }) {
   const [districtFilter, setDistrictFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
-  const [courtsView, setCourtsView] = useState("list");
+  const [selectedCourt, setSelectedCourt] = useState(null);
 
   const filtered = COURTS.filter(c => {
     const districtMatch = districtFilter === "All" || c.district === districtFilter;
@@ -1311,173 +1508,88 @@ function CourtsTab() {
   });
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="bg-white rounded-2xl p-4" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-        <h2 className="text-base font-black text-gray-900 mb-1">Courts We've Played At</h2>
-        <p className="text-sm text-gray-500 leading-relaxed">These are venues our community has personally visited and can vouch for. We'll keep adding more as we explore new spots around Taichung.</p>
-      </div>
+    <>
+      {selectedCourt && (
+        <CourtDetailModal
+          court={selectedCourt}
+          onClose={() => setSelectedCourt(null)}
+          user={user}
+          token={token}
+        />
+      )}
 
-      {/* List / Map toggle */}
-      <div className="flex gap-0.5 bg-gray-100 rounded-xl p-1 self-start">
-        <button onClick={() => setCourtsView("list")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            courtsView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-          }`}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-          </svg>
-          List
-        </button>
-        <button onClick={() => setCourtsView("map")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            courtsView === "map" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-          }`}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-          </svg>
-          Map
-        </button>
-      </div>
-
-      {courtsView === "map" ? (
-        <div className="flex flex-col gap-3">
-          <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-            <iframe
-              width="100%"
-              height="380"
-              style={{ border: 0 }}
-              loading="lazy"
-              allowFullScreen
-              title="Taichung Pickleball Courts"
-              src="https://www.google.com/maps/embed?pb=!1m16!1m12!1m3!1d29318.45!2d120.648!3d24.163!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!2m1!1spickleball+taichung!5e0!3m2!1sen!2stw!4v1746000000000!5m2!1sen!2stw"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            {COURTS.map((court, i) => (
-              <a key={i} href={court.mapUrl} target="_blank" rel="noopener noreferrer"
-                className="bg-white rounded-xl p-3 flex items-center gap-3 active:scale-[0.99] transition-all"
-                style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                <div className="w-2 h-10 rounded-full flex-shrink-0" style={{ background: court.color }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-800 leading-tight">{court.name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{court.area}</p>
-                </div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                  <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                </svg>
-              </a>
-            ))}
-          </div>
+      <div className="flex flex-col gap-4">
+        <div className="bg-white rounded-2xl p-4" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+          <h2 className="text-base font-black text-gray-900 mb-1">Courts We've Played At</h2>
+          <p className="text-sm text-gray-500 leading-relaxed">These are venues our community has personally visited and can vouch for. We'll keep adding more as we explore new spots around Taichung.</p>
         </div>
-      ) : (
-        <>
-          <div className="flex gap-2">
-            {["All", "Indoor", "Outdoor"].map(t => (
-              <button key={t} onClick={() => setTypeFilter(t)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
-                  typeFilter === t ? "text-white border-transparent" : "text-gray-500 bg-white border-gray-200"
-                }`}
-                style={typeFilter === t ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : {}}>
-                {t}
-              </button>
-            ))}
-          </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {DISTRICTS.map(d => (
-              <button key={d} onClick={() => setDistrictFilter(d)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
-                  districtFilter === d ? "text-white border-transparent" : "text-gray-500 bg-white border-gray-200"
-                }`}
-                style={districtFilter === d ? { background: "#06C755" } : {}}>
-                {d === "All" ? "All Districts" : `${d} District`}
-              </button>
-            ))}
-          </div>
+        {/* Indoor / Outdoor filter */}
+        <div className="flex gap-2">
+          {["All", "Indoor", "Outdoor"].map(t => (
+            <button key={t} onClick={() => setTypeFilter(t)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                typeFilter === t ? "text-white border-transparent" : "text-gray-500 bg-white border-gray-200"
+              }`}
+              style={typeFilter === t ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : {}}>
+              {t}
+            </button>
+          ))}
+        </div>
 
-          {filtered.length === 0 ? (
-            <div className="text-center py-12 text-gray-300 text-sm">
-              <p className="text-3xl mb-2">🏟</p>
-              <p>No courts match your filters yet.</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {filtered.map((court, i) => (
-                <a key={i} href={court.mapUrl} target="_blank" rel="noopener noreferrer"
-                  className="bg-white rounded-2xl overflow-hidden block active:scale-[0.99] transition-all"
-                  style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                  <div className="h-1.5" style={{ background: court.color }} />
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div>
-                        <h3 className="font-bold text-gray-900 text-base leading-tight">{court.name}</h3>
-                        <p className="text-xs text-gray-400 mt-0.5">📍 {court.area}</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-50 text-gray-500 border border-gray-100">{court.type}</span>
-                        {court.courts && <span className="text-xs text-gray-400">{court.courts} courts</span>}
-                      </div>
+        {/* District filter */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {DISTRICTS.map(d => (
+            <button key={d} onClick={() => setDistrictFilter(d)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                districtFilter === d ? "text-white border-transparent" : "text-gray-500 bg-white border-gray-200"
+              }`}
+              style={districtFilter === d ? { background: "#06C755" } : {}}>
+              {d === "All" ? "All Districts" : `${d} District`}
+            </button>
+          ))}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="text-center py-12 text-gray-300 text-sm">
+            <p className="text-3xl mb-2">🏟</p>
+            <p>No courts match your filters yet.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {filtered.map((court, i) => (
+              <button key={i} onClick={() => setSelectedCourt(court)}
+                className="bg-white rounded-2xl overflow-hidden text-left w-full active:scale-[0.99] transition-all"
+                style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                <div className="h-1.5" style={{ background: court.color }} />
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-base leading-tight">{court.name}</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">📍 {court.area}</p>
                     </div>
-                    <div className="flex flex-col gap-1.5 text-xs text-gray-500 mb-3">
-                      <div className="flex items-start gap-2"><span className="flex-shrink-0">💵</span><span>{court.price}</span></div>
-                      <div className="flex items-start gap-2"><span className="flex-shrink-0">🕐</span><span>{court.hours}</span></div>
-                    </div>
-                    {court.highlights?.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Highlights</p>
-                        <div className="flex flex-col gap-1.5">
-                          {court.highlights.map((h, j) => (
-                            <div key={j} className="flex items-start gap-2 text-xs text-gray-500">
-                              <span className="text-green-500 flex-shrink-0 mt-0.5">✓</span><span>{h}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {court.goodToKnow?.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Good to Know</p>
-                        <div className="flex flex-col gap-1.5">
-                          {court.goodToKnow.map((g, j) => (
-                            <div key={j} className="flex items-start gap-2 text-xs text-gray-500">
-                              <span className="text-amber-500 flex-shrink-0 mt-0.5">!</span><span>{g}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-xs text-gray-300">Tap to open in Maps</span>
-                      <div className="flex items-center gap-2">
-                        {court.bookingUrl && (
-                          <a href={court.bookingUrl} target="_blank" rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-xs font-semibold text-white px-2.5 py-1.5 rounded-lg"
-                            style={{ background: "#06C755" }}>
-                            Book
-                          </a>
-                        )}
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                          <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                        </svg>
-                      </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-50 text-gray-500 border border-gray-100">{court.type}</span>
+                      {court.courts && <span className="text-xs text-gray-400">{court.courts} courts</span>}
                     </div>
                   </div>
-                </a>
-              ))}
-            </div>
-          )}
-
-          <div className="rounded-2xl border-2 border-dashed border-gray-200 p-5 text-center">
-            <p className="text-sm font-semibold text-gray-500 mb-1">Know a court we're missing?</p>
-            <p className="text-xs text-gray-400">Message us on LINE and we'll add it.</p>
+                  <div className="flex flex-col gap-1.5 text-xs text-gray-500 mb-2">
+                    <div className="flex items-start gap-2"><span className="flex-shrink-0">💵</span><span>{court.price}</span></div>
+                    <div className="flex items-start gap-2"><span className="flex-shrink-0">🕐</span><span>{court.hours}</span></div>
+                  </div>
+                  <p className="text-xs text-gray-300 text-right mt-1">Tap to see details & reviews →</p>
+                </div>
+              </button>
+            ))}
           </div>
-        </>
-      )}
-    </div>
+        )}
+
+        <div className="rounded-2xl border-2 border-dashed border-gray-200 p-5 text-center">
+          <p className="text-sm font-semibold text-gray-500 mb-1">Know a court we're missing?</p>
+          <p className="text-xs text-gray-400">Message us on LINE and we'll add it.</p>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1869,7 +1981,7 @@ export default function App() {
             ))}
           </div>
         ) : view === "courts" ? (
-          <CourtsTab />
+          <CourtsTab user={user} token={token} />
         ) : view === "about" ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung!</h2>
