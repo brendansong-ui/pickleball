@@ -1921,12 +1921,6 @@ export default function App() {
                 }`}
                 style={view === v.id && v.id === "games" ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : {}}>
                 {v.label}
-                {v.id === "games" && upcomingGames.length > 0 && view !== "games" && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white flex items-center justify-center font-bold leading-none"
-                    style={{ fontSize: 9, background: "#06C755" }}>
-                    {upcomingGames.length}
-                  </span>
-                )}
               </button>
             ))}
           </div>
@@ -2078,7 +2072,7 @@ export default function App() {
             {/* What is Pickleball */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <img
-                src="https://images.unsplash.com/photo-1693044059603-d3f0d3c99c7c?w=800&auto=format&fit=crop&q=80"
+                src="https://images.unsplash.com/photo-1693142518230-f049c9fc1ad2?w=800&auto=format&fit=crop&q=80"
                 alt="Pickleball paddle and ball"
                 className="w-full h-40 object-cover"
                 onError={(e) => e.target.style.display="none"}
