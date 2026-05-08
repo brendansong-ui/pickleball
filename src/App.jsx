@@ -883,7 +883,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
   );
 }
 
-function GameCard({ game, onClick, isPinned, onTogglePin }) {
+function GameCard({ game, onClick }) {
   const isFull = game.players.length >= game.maxPlayers;
   const spotsLeft = game.maxPlayers - game.players.length;
   const pct = game.players.length / game.maxPlayers;
@@ -915,12 +915,6 @@ function GameCard({ game, onClick, isPinned, onTogglePin }) {
     const details = `${game.title}\n${game.location}${game.price > 0 ? `\nNT$${Number(game.price).toFixed(0)}/player` : ""}`;
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(game.title)}&dates=${fmt(start)}/${fmt(end)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(game.location)}`;
     window.open(url, "_blank");
-  }
-
-  function handlePin(e) {
-    e.stopPropagation();
-    setMenuOpen(false);
-    onTogglePin(game.id);
   }
 
   return (
@@ -1007,12 +1001,6 @@ function GameCard({ game, onClick, isPinned, onTogglePin }) {
       {menuOpen && (
         <div className="absolute top-10 right-2 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-w-44"
           onClick={(e) => e.stopPropagation()}>
-          <button onClick={handlePin}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left">
-            <span>{isPinned ? "📌" : "📌"}</span>
-            <span>{isPinned ? "Unpin from top" : "Pin to top"}</span>
-          </button>
-          <div className="h-px bg-gray-100" />
           <button onClick={handleShare}
             className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1772,13 +1760,7 @@ export default function App() {
   const [profileUserId, setProfileUserId] = useState(null);
   const [playView, setPlayView] = useState("list");
   const [showPastGames, setShowPastGames] = useState(false);
-  const [pinnedGames, setPinnedGames] = useState([]);
-
-  function handleTogglePin(gameId) {
-    setPinnedGames(prev =>
-      prev.includes(gameId) ? prev.filter(id => id !== gameId) : [...prev, gameId]
-    );
-  }
+  const [heroMenuOpen, setHeroMenuOpen] = useState(false);
 
   useEffect(() => {
     // Prevent pinch-to-zoom on iOS Safari
@@ -1861,10 +1843,7 @@ export default function App() {
   const allSorted = [...games].sort((a, b) => new Date(a.date + "T" + a.time) - new Date(b.date + "T" + b.time));
   const upcomingGames = allSorted.filter(g => new Date(g.date + "T" + (g.endTime || g.time)) >= now);
   const pastGames = allSorted.filter(g => new Date(g.date + "T" + (g.endTime || g.time)) < now);
-  const sorted = [
-    ...upcomingGames.filter(g => pinnedGames.includes(g.id)),
-    ...upcomingGames.filter(g => !pinnedGames.includes(g.id)),
-  ];
+  const sorted = upcomingGames;
 
   return (
     <div className="min-h-screen" style={{ background: "#f8f9fb" }}>
@@ -1978,28 +1957,80 @@ export default function App() {
               const todayStr = now.toISOString().slice(0, 10);
               const diffDays = Math.round((new Date(next.date) - new Date(todayStr)) / (1000 * 60 * 60 * 24));
               const timeLabel = diffDays === 0 ? "Today" : diffDays === 1 ? "Tomorrow" : `In ${diffDays} days`;
+
+              function heroShare(e) {
+                e.stopPropagation();
+                const text = `🏓 ${next.title}\n📍 ${next.location}\n📅 ${new Date(next.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(next.time)}${next.endTime ? `–${displayTime(next.endTime)}` : ""}\n${next.price > 0 ? `NT$${Number(next.price).toFixed(0)}/player` : "Free"}\n\nJoin here: ${window.location.href}`;
+                if (navigator.share) { navigator.share({ title: "Pickleball Taichung", text }); }
+                else { navigator.clipboard.writeText(text); alert("Game details copied!"); }
+              }
+
+              function heroCalendar(e) {
+                e.stopPropagation();
+                const start = new Date(`${next.date}T${next.time}`);
+                const end = next.endTime ? new Date(`${next.date}T${next.endTime}`) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+                const fmt = (d) => d.toISOString().replace(/-|:|\.\d+/g, "");
+                const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(next.title)}&dates=${fmt(start)}/${fmt(end)}&location=${encodeURIComponent(next.location)}`;
+                window.open(url, "_blank");
+              }
+
               return (
-                <button onClick={() => setSelectedGame(next)}
-                  className="w-full text-left rounded-2xl overflow-hidden mb-4 active:scale-[0.99] transition-all"
-                  style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)", boxShadow: "0 4px 12px rgba(30,58,95,0.25)" }}>
-                  <div className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold text-blue-300 uppercase tracking-widest">Next Up</span>
-                      <span className="text-xs font-bold text-white bg-white/20 px-2.5 py-1 rounded-full">{timeLabel}</span>
-                    </div>
-                    <h3 className="text-lg font-black text-white leading-tight mb-1">{next.title}</h3>
-                    <p className="text-xs text-blue-200 mb-3">📍 {next.location}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-3 text-xs text-blue-200">
-                        <span>⏰ {displayTime(next.time)}{next.endTime ? `–${displayTime(next.endTime)}` : ""}</span>
-                        <span>{next.price > 0 ? `NT$${Number(next.price).toFixed(0)}` : "Free"}</span>
+                <div className="relative mb-4">
+                  <button onClick={() => setSelectedGame(next)}
+                    className="w-full text-left rounded-2xl overflow-hidden active:scale-[0.99] transition-all"
+                    style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)", boxShadow: "0 4px 12px rgba(30,58,95,0.25)" }}>
+                    <div className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold text-blue-300 uppercase tracking-widest">Next Up</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white bg-white/20 px-2.5 py-1 rounded-full">{timeLabel}</span>
+                          <button onClick={(e) => { e.stopPropagation(); setHeroMenuOpen(v => !v); }}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                            </svg>
+                          </button>
+                        </div>
                       </div>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${isFull ? "bg-red-400/30 text-red-200" : "bg-white/20 text-white"}`}>
-                        {isFull ? "Full" : `${next.players.length}/${next.maxPlayers} joined`}
-                      </span>
+                      <h3 className="text-lg font-black text-white leading-tight mb-1">{next.title}</h3>
+                      <p className="text-xs text-blue-200 mb-3">📍 {next.location}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-3 text-xs text-blue-200">
+                          <span>⏰ {displayTime(next.time)}{next.endTime ? `–${displayTime(next.endTime)}` : ""}</span>
+                          <span>{next.price > 0 ? `NT$${Number(next.price).toFixed(0)}` : "Free"}</span>
+                        </div>
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${isFull ? "bg-red-400/30 text-red-200" : "bg-white/20 text-white"}`}>
+                          {isFull ? "Full" : `${next.players.length}/${next.maxPlayers} joined`}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </button>
+                  </button>
+
+                  {heroMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setHeroMenuOpen(false)} />
+                      <div className="absolute top-12 right-2 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-w-44">
+                        <button onClick={(e) => { heroShare(e); setHeroMenuOpen(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 text-left">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 2l-4 4h3v9h2V6h3l-4-4z"/>
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                          </svg>
+                          Share game
+                        </button>
+                        <div className="h-px bg-gray-100" />
+                        <button onClick={(e) => { heroCalendar(e); setHeroMenuOpen(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 text-left">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                          </svg>
+                          Add to Calendar
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               );
             })()}
 
@@ -2035,7 +2066,7 @@ export default function App() {
                   ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No upcoming games.</p></div>
                   : <div className="flex flex-col gap-3">
                       {sorted.slice(1).map((game) => (
-                        <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} isPinned={pinnedGames.includes(game.id)} onTogglePin={handleTogglePin} />
+                        <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
                       ))}
                       {sorted.length === 1 && (
                         <p className="text-xs text-gray-300 text-center py-4">Only one game coming up — shown above.</p>
@@ -2051,7 +2082,7 @@ export default function App() {
                     {showPastGames && (
                       <div className="flex flex-col gap-3 mt-3 opacity-60">
                         {pastGames.slice().reverse().map((game) => (
-                          <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} isPinned={pinnedGames.includes(game.id)} onTogglePin={handleTogglePin} />
+                          <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
                         ))}
                       </div>
                     )}
