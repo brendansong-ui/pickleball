@@ -961,7 +961,12 @@ function GameCard({ game, onClick, isPinned, onTogglePin }) {
             }
           </div>
 
-          <SpotsBar filled={game.players.length} max={game.maxPlayers} />
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
+            style={{ background: isFull ? "linear-gradient(135deg, #d97706, #f59e0b)" : "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+            {isFull ? "Join Waitlist" : "Register"}
+          </button>
         </div>
       </div>
 
