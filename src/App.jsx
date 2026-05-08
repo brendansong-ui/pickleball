@@ -574,12 +574,12 @@ function RegisterModal({ game, onRegister, onClose, user }) {
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">House Rules</p>
             <div className="flex flex-col gap-2">
               {[
-                "Only sign up if you're planning to come.",
-                "Cancel at least 24 hours before the game. Late cancellations mean you'll be asked to cover the session fee next time.",
-                "Settle court fees in cash with the host before the game starts.",
-                "Arrive 10 minutes early. Games start on time.",
-                "Be kind and encouraging. All levels are welcome.",
-                "No-shows without notice will be recorded. Two strikes and your LINE account will be blacklisted.",
+                "Only sign up if you're genuinely planning to come. Other players are counting on you.",
+                "Life happens, but if you need to cancel, give at least 24 hours notice.",
+                "Sort out court fees with the host in cash before the game kicks off.",
+                "Aim to arrive 10 minutes early so everyone can warm up and start on time.",
+                "Be welcoming and encouraging. All levels are here to have fun and improve.",
+                "If you don't show up without letting the host know, it gets noted. Two strikes and you'll be blacklisted.",
               ].map((rule, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
                   <span className="flex-shrink-0 font-bold text-gray-400">{i + 1}.</span>
