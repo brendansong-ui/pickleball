@@ -258,7 +258,7 @@ async function createGame(data, token) {
       method: "POST", prefer: "return=representation",
       body: JSON.stringify({
         game_id: result[0].id, name: data.createdByName || data.createdBy,
-        dupr_rating: null, is_waitlist: false, avatar_url: data.createdByAvatar || null,
+        dupr_rating: data.createdByDupr || null, is_waitlist: false, avatar_url: data.createdByAvatar || null,
         user_id: data.createdByUserId || null,
         guest_token: guestToken, is_host: true,
       }),
@@ -1649,7 +1649,13 @@ export default function App() {
   }
 
   async function handleRegister(gameId, player, isWaitlist = false) {
-    await createRegistration(gameId, { ...player, userId: user?.id || null }, isWaitlist);
+    // Fetch latest DUPR from profile if user is signed in
+    let duprRating = player.duprRating;
+    if (user?.id && !duprRating) {
+      const profile = await fetchProfile(user.id, token);
+      if (profile?.dupr_rating) duprRating = profile.dupr_rating;
+    }
+    await createRegistration(gameId, { ...player, duprRating, userId: user?.id || null }, isWaitlist);
     if (user?.id) await incrementGamesPlayed(user.id, token);
     await loadGames();
   }
@@ -1662,10 +1668,12 @@ export default function App() {
   async function handleSaveGame(data) {
     const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || sessionStorage.getItem("line_display_name") || user?.email || null;
     const avatarUrl = user?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null;
+    const profile = user?.id ? await fetchProfile(user.id, token) : null;
+    const duprRating = profile?.dupr_rating || null;
     if (gameForm?.id) {
       await updateGame(gameForm.id, data, token);
     } else {
-      await createGame({ ...data, createdBy: user?.email || null, createdByName: displayName, createdByAvatar: avatarUrl, createdByUserId: user?.id || null }, token);
+      await createGame({ ...data, createdBy: user?.email || null, createdByName: displayName, createdByAvatar: avatarUrl, createdByUserId: user?.id || null, createdByDupr: duprRating }, token);
       if (user?.id) await incrementGamesHosted(user.id, token);
     }
     await loadGames();
