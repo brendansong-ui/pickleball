@@ -1316,9 +1316,7 @@ export default function App() {
                   <Avatar url={user.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url")} name={user.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || user.email} size={8} className="ring-2 ring-white shadow-sm" />
                 </button>
               </div>
-            ) : (
-              <button onClick={() => setShowAdminLogin(true)} className="text-gray-200 hover:text-gray-400 text-base px-1 transition-colors" title="Admin">⚙️</button>
-            )}
+            ) : null}
           </div>
         </div>
 
