@@ -522,20 +522,14 @@ function RegisterModal({ game, onRegister, onClose, user }) {
   const isFull = game.players.length >= game.maxPlayers;
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "";
   const avatarUrl = user?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null;
-  const [duprRating, setDuprRating] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSubmit() {
-    const rating = duprRating ? parseFloat(duprRating) : null;
-    if (duprRating && (isNaN(rating) || rating < 1 || rating > 6)) {
-      setError("DUPR rating must be between 1 and 6.");
-      return;
-    }
     setLoading(true);
     setError("");
     try {
-      await onRegister(game.id, { name: displayName, duprRating: rating, avatarUrl }, isFull);
+      await onRegister(game.id, { name: displayName, avatarUrl }, isFull);
       onClose();
     } catch { setError("Something went wrong. Please try again."); }
     setLoading(false);
@@ -558,7 +552,6 @@ function RegisterModal({ game, onRegister, onClose, user }) {
           </div>
         )}
 
-        {/* Show signed-in user */}
         <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-3 mb-4">
           {avatarUrl ? (
             <img src={avatarUrl} className="w-9 h-9 rounded-full object-cover" alt="" onError={(e) => e.target.style.display="none"} />
@@ -573,25 +566,12 @@ function RegisterModal({ game, onRegister, onClose, user }) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
-              DUPR Rating <span className="normal-case font-normal text-gray-300">(optional)</span>
-            </label>
-            <input type="number" min="1" max="6" step="0.01"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50"
-              placeholder="e.g. 3.75" value={duprRating}
-              onChange={(e) => setDuprRating(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()} />
-            <p className="text-xs text-gray-300 mt-1">Enter your DUPR rating so others know your skill level.</p>
-          </div>
-          {error && <p className="text-xs text-red-500">{error}</p>}
-          <button onClick={handleSubmit} disabled={loading}
-            className="mt-1 w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-50"
-            style={{ background: isFull ? "linear-gradient(135deg, #d97706, #f59e0b)" : "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-            {loading ? "Saving..." : isFull ? "Join Waitlist" : "Confirm Registration"}
-          </button>
-        </div>
+        {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
+        <button onClick={handleSubmit} disabled={loading}
+          className="w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-50"
+          style={{ background: isFull ? "linear-gradient(135deg, #d97706, #f59e0b)" : "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+          {loading ? "Saving..." : isFull ? "Join Waitlist" : "Confirm Registration"}
+        </button>
       </div>
     </div>
   );
