@@ -1216,10 +1216,10 @@ export default function App() {
               <p className="text-xs text-gray-400 mb-4">Watch and learn the essential shots</p>
               <div className="flex flex-col gap-3">
                 {[
-                  { title: "How to Serve", channel: "Pickleball Channel", id: "aGzPUvVSDBs" },
-                  { title: "The Dink Shot", channel: "Pickleball Channel", id: "Ec3Nj_JnNmU" },
-                  { title: "Third Shot Drop", channel: "Pickleball Kitchen", id: "7m5oMKbWkYA" },
-                  { title: "Volley Technique", channel: "Tyson McGuffin", id: "sNJk2VJ-pFE" },
+                  { title: "Complete Beginner's Guide to Pickleball", channel: "Pickleball University", id: "I1p7NwhGPOc" },
+                  { title: "How to Serve — Beginner Lesson", channel: "Pickleball University", id: "v6QWUweWmMc" },
+                  { title: "How to Dink (The Right Way)", channel: "Pickleball Channel", id: "5-ty-cyg6sI" },
+                  { title: "3rd Shot Drop — Master It", channel: "Pickleball Channel", id: "xu6pukeV32w" },
                 ].map((video, i) => (
                   <a key={i} href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
