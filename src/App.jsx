@@ -142,6 +142,20 @@ async function incrementGamesPlayed(userId, token) {
   } catch {}
 }
 
+async function incrementGamesHosted(userId, token) {
+  try {
+    const profile = await fetchProfile(userId, token);
+    const current = profile?.games_hosted || 0;
+    await upsertProfile(userId, { games_hosted: current + 1 }, token);
+  } catch {}
+}
+
+const ADMIN_LINE_USER_ID = "U353dbd08104343b85c09af4067023dd4";
+
+function isAdminUser(user) {
+  return user?.user_metadata?.line_user_id === ADMIN_LINE_USER_ID;
+}
+
 function getInitialsAvatar(name) {
   const initials = name ? name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) : "?";
   const colors = ["#1e3a5f", "#2d5a8e", "#06C755", "#f59e0b", "#8b5cf6", "#ef4444", "#0891b2"];
@@ -374,7 +388,6 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile }) {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [duprRating, setDuprRating] = useState("");
-  const [duprUrl, setDuprUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -382,7 +395,6 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile }) {
       const p = await fetchProfile(userId, token);
       setProfile(p);
       setDuprRating(p?.dupr_rating?.toString() || "");
-      setDuprUrl(p?.dupr_url || "");
       setLoading(false);
     }
     load();
@@ -392,10 +404,9 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile }) {
     setSaving(true);
     const rating = duprRating ? parseFloat(duprRating) : null;
     await upsertProfile(userId, {
-      display_name: currentUser?.user_metadata?.full_name || currentUser?.email,
+      display_name: currentUser?.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || currentUser?.email,
       avatar_url: currentUser?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null,
       dupr_rating: rating,
-      dupr_url: duprUrl.trim() || null,
     }, token);
     const updated = await fetchProfile(userId, token);
     setProfile(updated);
@@ -403,20 +414,19 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile }) {
     setSaving(false);
   }
 
-  const name = profile?.display_name || currentUser?.user_metadata?.full_name || "Player";
+  const name = profile?.display_name || currentUser?.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || "Player";
   const avatarUrl = profile?.avatar_url || currentUser?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null;
   const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : null;
+  const isAdmin = isAdminUser(currentUser) && isOwnProfile;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
-        {/* Header banner */}
         <div className="h-20 relative" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
           <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/20 text-white text-sm">✕</button>
         </div>
 
         <div className="px-5 pb-5">
-          {/* Avatar — overlaps banner */}
           <div className="flex items-end justify-between -mt-8 mb-3">
             <div className="ring-4 ring-white rounded-full">
               <Avatar url={avatarUrl} name={name} size={16} />
@@ -433,33 +443,31 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile }) {
             <div className="text-center py-6 text-gray-300 text-sm">Loading...</div>
           ) : (
             <>
-              <h2 className="text-lg font-black text-gray-900">{name}</h2>
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-lg font-black text-gray-900">{name}</h2>
+                {isAdmin && (
+                  <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Admin</span>
+                )}
+              </div>
               {memberSince && <p className="text-xs text-gray-400 mb-4">Member since {memberSince}</p>}
 
-              {/* Stats */}
               <div className="flex gap-3 mb-4">
                 <div className="flex-1 bg-gray-50 rounded-2xl p-3 text-center">
                   <p className="text-xl font-black text-gray-900">{profile?.games_played || 0}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Games Played</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Games Joined</p>
+                </div>
+                <div className="flex-1 bg-gray-50 rounded-2xl p-3 text-center">
+                  <p className="text-xl font-black text-gray-900">{profile?.games_hosted || 0}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Games Hosted</p>
                 </div>
                 <div className="flex-1 bg-gray-50 rounded-2xl p-3 text-center">
                   <p className="text-xl font-black" style={{ color: profile?.dupr_rating ? "#1e3a5f" : "#d1d5db" }}>
                     {profile?.dupr_rating ? Number(profile.dupr_rating).toFixed(2) : "—"}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">DUPR Rating</p>
+                  <p className="text-xs text-gray-400 mt-0.5">DUPR</p>
                 </div>
               </div>
 
-              {/* DUPR link */}
-              {profile?.dupr_url && !editing && (
-                <a href={profile.dupr_url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold text-white mb-3"
-                  style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-                  View DUPR Profile →
-                </a>
-              )}
-
-              {/* Edit form */}
               {editing && (
                 <div className="flex flex-col gap-3 mt-2">
                   <div>
@@ -467,15 +475,7 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile }) {
                     <input type="number" min="2" max="8" step="0.01" placeholder="e.g. 3.75"
                       value={duprRating} onChange={(e) => setDuprRating(e.target.value)}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
-                      DUPR Profile URL <span className="normal-case font-normal text-gray-300">(optional)</span>
-                    </label>
-                    <input type="url" placeholder="https://app.mydupr.com/profile/..." 
-                      value={duprUrl} onChange={(e) => setDuprUrl(e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
-                    <p className="text-xs text-gray-300 mt-1">Paste your DUPR profile link so others can verify your rating.</p>
+                    <p className="text-xs text-gray-300 mt-1">Enter your self-reported DUPR rating.</p>
                   </div>
                   <div className="flex gap-2 mt-1">
                     <button onClick={() => setEditing(false)}
@@ -1196,6 +1196,7 @@ export default function App() {
         const u = await getUser(t);
         if (u) {
           setToken(t); setUser(u);
+          if (isAdminUser(u)) setIsAdmin(true);
           // Create profile if it doesn't exist
           upsertProfile(u.id, {
             display_name: u.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || u.email,
@@ -1239,6 +1240,7 @@ export default function App() {
       await updateGame(gameForm.id, data, token);
     } else {
       await createGame({ ...data, createdBy: user?.email || null, createdByName: displayName, createdByAvatar: avatarUrl, createdByUserId: user?.id || null }, token);
+      if (user?.id) await incrementGamesHosted(user.id, token);
     }
     await loadGames();
   }
@@ -1293,9 +1295,14 @@ export default function App() {
           </div>
           <div className="flex items-center gap-2">
             {user ? (
-              <button onClick={() => setProfileUserId(user.id)} className="focus:outline-none">
-                <Avatar url={user.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url")} name={user.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || user.email} size={8} className="ring-2 ring-white shadow-sm" />
-              </button>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Admin</span>
+                )}
+                <button onClick={() => setProfileUserId(user.id)} className="focus:outline-none">
+                  <Avatar url={user.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url")} name={user.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || user.email} size={8} className="ring-2 ring-white shadow-sm" />
+                </button>
+              </div>
             ) : (
               <button onClick={() => setShowAdminLogin(true)} className="text-gray-200 hover:text-gray-400 text-base px-1 transition-colors" title="Admin">⚙️</button>
             )}
