@@ -1318,41 +1318,44 @@ export default function App() {
       )}
 
       <header className="bg-white sticky top-0 z-10" style={{ boxShadow: "0 1px 0 rgba(0,0,0,0.06)" }}>
-        <div className="max-w-2xl mx-auto px-4 pt-3 pb-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 flex-shrink-0">
+        {/* Row 1: logo + sign in / avatar */}
+        <div className="max-w-2xl mx-auto px-4 pt-3 pb-1 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Taichung Pickleball Community" className="w-8 h-8 object-contain" />
             <h1 className="font-black text-gray-900 text-sm leading-tight tracking-tight">Pickleball Taichung</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex gap-0.5 bg-gray-100 rounded-xl p-1">
-              {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "watch", label: "Watch" }, { id: "about", label: "About" }].map((v) => (
-                <button key={v.id} onClick={() => setView(v.id)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    view === v.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                  }`}>
-                  {v.label}
-                </button>
-              ))}
-            </div>
-            {user ? (
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                {isAdmin && (
-                  <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Admin</span>
-                )}
-                <button onClick={() => setProfileUserId(user.id)} className="focus:outline-none flex-shrink-0">
-                  <Avatar url={user.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url")} name={user.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || user.email} size={8} className="ring-2 ring-white shadow-sm" />
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => signInWithLINE()}
-                className="flex-shrink-0 flex items-center gap-1 text-white text-xs font-bold px-2.5 py-2 rounded-xl active:scale-95 transition-all"
-                style={{ background: "#06C755" }}>
-                <svg width="11" height="11" viewBox="0 0 48 48" fill="white">
-                  <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
-                </svg>
-                Sign in
+          {user ? (
+            <div className="flex items-center gap-1.5">
+              {isAdmin && (
+                <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Admin</span>
+              )}
+              <button onClick={() => setProfileUserId(user.id)} className="focus:outline-none">
+                <Avatar url={user.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url")} name={user.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || user.email} size={8} className="ring-2 ring-white shadow-sm" />
               </button>
-            )}
+            </div>
+          ) : (
+            <button onClick={() => signInWithLINE()}
+              className="flex items-center gap-1.5 text-white text-xs font-bold px-3 py-2 rounded-xl active:scale-95 transition-all"
+              style={{ background: "#06C755" }}>
+              <svg width="11" height="11" viewBox="0 0 48 48" fill="white">
+                <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
+              </svg>
+              Sign in with LINE
+            </button>
+          )}
+        </div>
+
+        {/* Row 2: tabs */}
+        <div className="max-w-2xl mx-auto px-4 pb-2">
+          <div className="flex gap-0.5 bg-gray-100 rounded-xl p-1 w-full">
+            {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "watch", label: "Watch" }, { id: "about", label: "About" }].map((v) => (
+              <button key={v.id} onClick={() => setView(v.id)}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  view === v.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                }`}>
+                {v.label}
+              </button>
+            ))}
           </div>
         </div>
       </header>
