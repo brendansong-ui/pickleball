@@ -423,28 +423,22 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile, onSig
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm">
-        {/* Banner */}
-        <div className="h-24 rounded-t-3xl relative" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+        {/* Banner — tall enough for avatar to overlap nicely */}
+        <div className="h-28 rounded-t-3xl relative" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
           <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/20 text-white text-sm">✕</button>
         </div>
 
         <div className="px-5 pb-5">
-          {/* Avatar overlapping banner — use negative margin but no overflow-hidden on parent */}
-          <div className="flex items-end justify-between mb-3" style={{ marginTop: -32 }}>
-            <div className="ring-4 ring-white rounded-full bg-white">
-              <Avatar url={avatarUrl} name={name} size={16} />
+          {/* Avatar — pulled up to overlap the banner */}
+          <div className="flex items-end justify-between mb-3" style={{ marginTop: -40 }}>
+            <div className="ring-4 ring-white rounded-full" style={{ background: "white" }}>
+              <Avatar url={avatarUrl} name={name} size={20} />
             </div>
-            <div className="flex items-center gap-2 mt-8">
+            <div className="flex items-center gap-2" style={{ marginTop: 48 }}>
               {isOwnProfile && !editing && (
                 <button onClick={() => setEditing(true)}
                   className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
                   Edit
-                </button>
-              )}
-              {isOwnProfile && onSignOut && (
-                <button onClick={onSignOut}
-                  className="text-xs font-semibold text-red-400 bg-red-50 px-3 py-1.5 rounded-full">
-                  Sign Out
                 </button>
               )}
             </div>
@@ -1204,6 +1198,7 @@ export default function App() {
   const [selectedGame, setSelectedGame] = useState(null);
   const [view, setView] = useState("games");
   const [profileUserId, setProfileUserId] = useState(null);
+  const [playView, setPlayView] = useState("list");
 
   useEffect(() => {
     // Prevent pinch-to-zoom on iOS Safari
@@ -1383,16 +1378,43 @@ export default function App() {
           </div>
         ) : view === "games" ? (
           <>
-            <CalendarView games={games} onGameClick={(game) => setSelectedGame(game)} />
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-6 mb-3">Upcoming Games</h2>
-            {sorted.length === 0
-              ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No games yet.</p></div>
-              : <div className="flex flex-col gap-3">
-                  {sorted.map((game) => (
-                    <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
-                  ))}
-                </div>
-            }
+            {/* List / Calendar toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Upcoming Games</h2>
+              <div className="flex bg-gray-100 rounded-xl p-1 gap-0.5">
+                <button onClick={() => setPlayView("list")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    playView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                  }`}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                    <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                  </svg>
+                  List
+                </button>
+                <button onClick={() => setPlayView("calendar")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    playView === "calendar" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                  }`}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  Calendar
+                </button>
+              </div>
+            </div>
+
+            {playView === "list" ? (
+              sorted.length === 0
+                ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No games yet.</p></div>
+                : <div className="flex flex-col gap-3">
+                    {sorted.map((game) => (
+                      <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
+                    ))}
+                  </div>
+            ) : (
+              <CalendarView games={games} onGameClick={(game) => setSelectedGame(game)} />
+            )}
           </>
         ) : view === "learn" ? (
           <div className="flex flex-col gap-6">
