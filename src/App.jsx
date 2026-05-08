@@ -419,14 +419,19 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile, onSig
   async function handleSave() {
     setSaving(true);
     const rating = duprRating ? parseFloat(duprRating) : null;
-    await upsertProfile(userId, {
-      display_name: currentUser?.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || currentUser?.email,
-      avatar_url: currentUser?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null,
-      dupr_rating: rating,
-    }, token);
-    const updated = await fetchProfile(userId, token);
-    setProfile(updated);
-    setEditing(false);
+    try {
+      await upsertProfile(userId, {
+        display_name: currentUser?.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || currentUser?.email,
+        avatar_url: currentUser?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null,
+        dupr_rating: rating,
+      }, token);
+      const updated = await fetchProfile(userId, token);
+      setProfile(updated);
+      setEditing(false);
+    } catch (e) {
+      console.error("Profile save error:", e.message);
+      alert("Could not save profile. Please try again.");
+    }
     setSaving(false);
   }
 
