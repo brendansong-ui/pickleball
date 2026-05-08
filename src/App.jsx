@@ -820,11 +820,12 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
   );
 }
 
-function GameCard({ game, onClick }) {
+function GameCard({ game, onClick, isPinned, onTogglePin }) {
   const isFull = game.players.length >= game.maxPlayers;
   const spotsLeft = game.maxPlayers - game.players.length;
   const pct = game.players.length / game.maxPlayers;
   const almostFull = !isFull && spotsLeft <= 2;
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const statusColor = isFull ? "bg-red-50 text-red-500 border-red-100"
     : almostFull ? "bg-amber-50 text-amber-600 border-amber-100"
@@ -832,6 +833,7 @@ function GameCard({ game, onClick }) {
 
   function handleShare(e) {
     e.stopPropagation();
+    setMenuOpen(false);
     const text = `🏓 ${game.title}\n📍 ${game.location}\n📅 ${new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(game.time)}${game.endTime ? `–${displayTime(game.endTime)}` : ""}\n${game.price > 0 ? `💵 NT$${Number(game.price).toFixed(0)}/player` : "🆓 Free"}\n\nJoin here: ${window.location.href}`;
     if (navigator.share) {
       navigator.share({ title: "Pickleball Taichung", text });
@@ -841,66 +843,118 @@ function GameCard({ game, onClick }) {
     }
   }
 
+  function handleAddToCalendar(e) {
+    e.stopPropagation();
+    setMenuOpen(false);
+    const start = new Date(`${game.date}T${game.time}`);
+    const end = game.endTime ? new Date(`${game.date}T${game.endTime}`) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    const fmt = (d) => d.toISOString().replace(/-|:|\.\d+/g, "");
+    const details = `${game.title}\n${game.location}${game.price > 0 ? `\nNT$${Number(game.price).toFixed(0)}/player` : ""}`;
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(game.title)}&dates=${fmt(start)}/${fmt(end)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(game.location)}`;
+    window.open(url, "_blank");
+  }
+
+  function handlePin(e) {
+    e.stopPropagation();
+    setMenuOpen(false);
+    onTogglePin(game.id);
+  }
+
   return (
-    <div onClick={onClick}
-      className="bg-white rounded-2xl overflow-hidden active:scale-[0.99] transition-all cursor-pointer"
-      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)" }}>
-      <div className="h-1" style={{ background: isFull ? "#f87171" : pct >= 0.75 ? "#fbbf24" : "#4ade80" }} />
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
+    <div className="relative">
+      {/* Backdrop to close menu */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }} />
+      )}
+
+      <div onClick={onClick}
+        className="bg-white rounded-2xl overflow-hidden active:scale-[0.99] transition-all cursor-pointer"
+        style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)" }}>
+        <div className="h-1" style={{ background: isFull ? "#f87171" : pct >= 0.75 ? "#fbbf24" : "#4ade80" }} />
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex-1 min-w-0">
               <h3 className="font-bold text-gray-900 text-base leading-tight">{game.title}</h3>
-              <button onClick={handleShare}
-                className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0"
-                title="Share">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2l-4 4h3v9h2V6h3l-4-4z"/>
-                  
-                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                </svg>
-              </button>
-            </div>
-            <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
-            {game.createdByName && (
-              <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-                🏅 Host: {game.createdByName}
-                {game.createdByEmail === `${ADMIN_LINE_USER_ID.toLowerCase()}@line.user` && (
-                  <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-full">Admin</span>
-                )}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <div className="flex items-center gap-1.5">
-              {almostFull && (
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                </span>
+              <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
+              {game.createdByName && (
+                <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                  🏅 Host: {game.createdByName}
+                  {game.createdByEmail === `${ADMIN_LINE_USER_ID.toLowerCase()}@line.user` && (
+                    <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-full">Admin</span>
+                  )}
+                </p>
               )}
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
-                {isFull ? "Full" : `${spotsLeft} left`}
-              </span>
             </div>
-            {isFull && game.waitlist.length > 0 && (
-              <span className="text-xs text-amber-500 font-semibold">{game.waitlist.length} waiting</span>
-            )}
+
+            {/* Right side: status + ellipsis */}
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+              <div className="flex items-center gap-1.5">
+                {almostFull && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                )}
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
+                  {isFull ? "Full" : `${spotsLeft} left`}
+                </span>
+                {/* Ellipsis button */}
+                <button onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-colors relative z-20">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                  </svg>
+                </button>
+              </div>
+              {isFull && game.waitlist.length > 0 && (
+                <span className="text-xs text-amber-500 font-semibold">{game.waitlist.length} waiting</span>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
-          <span>📅 {new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
-          <span>⏰ {displayTime(game.time)}{game.endTime ? `–${displayTime(game.endTime)}` : ""}</span>
-          <span>🏟 {game.courts}ct</span>
-          {game.price > 0
-            ? <span className="text-emerald-600 font-semibold">NT${Number(game.price).toFixed(0)}</span>
-            : <span className="text-emerald-500 font-semibold">Free</span>
-          }
-        </div>
+          <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
+            <span>📅 {new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
+            <span>⏰ {displayTime(game.time)}{game.endTime ? `–${displayTime(game.endTime)}` : ""}</span>
+            <span>🏟 {game.courts}ct</span>
+            {game.price > 0
+              ? <span className="text-emerald-600 font-semibold">NT${Number(game.price).toFixed(0)}</span>
+              : <span className="text-emerald-500 font-semibold">Free</span>
+            }
+          </div>
 
-        <SpotsBar filled={game.players.length} max={game.maxPlayers} />
+          <SpotsBar filled={game.players.length} max={game.maxPlayers} />
+        </div>
       </div>
+
+      {/* Dropdown menu */}
+      {menuOpen && (
+        <div className="absolute top-10 right-2 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-w-44"
+          onClick={(e) => e.stopPropagation()}>
+          <button onClick={handlePin}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left">
+            <span>{isPinned ? "📌" : "📌"}</span>
+            <span>{isPinned ? "Unpin from top" : "Pin to top"}</span>
+          </button>
+          <div className="h-px bg-gray-100" />
+          <button onClick={handleShare}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2l-4 4h3v9h2V6h3l-4-4z"/>
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+            </svg>
+            <span>Share game</span>
+          </button>
+          <div className="h-px bg-gray-100" />
+          <button onClick={handleAddToCalendar}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span>Add to Calendar</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1631,6 +1685,13 @@ export default function App() {
   const [profileUserId, setProfileUserId] = useState(null);
   const [playView, setPlayView] = useState("list");
   const [showPastGames, setShowPastGames] = useState(false);
+  const [pinnedGames, setPinnedGames] = useState([]);
+
+  function handleTogglePin(gameId) {
+    setPinnedGames(prev =>
+      prev.includes(gameId) ? prev.filter(id => id !== gameId) : [...prev, gameId]
+    );
+  }
 
   useEffect(() => {
     // Prevent pinch-to-zoom on iOS Safari
@@ -1713,7 +1774,10 @@ export default function App() {
   const allSorted = [...games].sort((a, b) => new Date(a.date + "T" + a.time) - new Date(b.date + "T" + b.time));
   const upcomingGames = allSorted.filter(g => new Date(g.date + "T" + (g.endTime || g.time)) >= now);
   const pastGames = allSorted.filter(g => new Date(g.date + "T" + (g.endTime || g.time)) < now);
-  const sorted = upcomingGames;
+  const sorted = [
+    ...upcomingGames.filter(g => pinnedGames.includes(g.id)),
+    ...upcomingGames.filter(g => !pinnedGames.includes(g.id)),
+  ];
 
   return (
     <div className="min-h-screen" style={{ background: "#f8f9fb" }}>
@@ -1844,7 +1908,7 @@ export default function App() {
                   ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No upcoming games.</p></div>
                   : <div className="flex flex-col gap-3">
                       {sorted.map((game) => (
-                        <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
+                        <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} isPinned={pinnedGames.includes(game.id)} onTogglePin={handleTogglePin} />
                       ))}
                     </div>
                 }
@@ -1857,7 +1921,7 @@ export default function App() {
                     {showPastGames && (
                       <div className="flex flex-col gap-3 mt-3 opacity-60">
                         {pastGames.slice().reverse().map((game) => (
-                          <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
+                          <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} isPinned={pinnedGames.includes(game.id)} onTogglePin={handleTogglePin} />
                         ))}
                       </div>
                     )}
