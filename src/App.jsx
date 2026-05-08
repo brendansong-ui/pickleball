@@ -1293,6 +1293,7 @@ const COURTS = [
       "Weekend slots book up quickly — plan ahead and reserve early.",
     ],
     mapUrl: "https://www.google.com/maps/place/%E5%8C%B9%E5%85%8B%E7%8E%8B+PICKLE+KING%EF%BD%9C%E5%8C%B9%E5%85%8B%E7%90%83%E9%81%8B%E5%8B%95%E9%A4%90%E5%BB%B3/@24.1477486,120.6194094,17z/data=!3m1!4b1!4m6!3m5!1s0x34693d402c00a82b:0x8b8ca9677840d2be!8m2!3d24.1477486!4d120.6219843!16s%2Fg%2F11z1t8nynv",
+    bookingUrl: "https://pickleball-king.com.tw",
     color: "#7c3aed",
   },
   {
