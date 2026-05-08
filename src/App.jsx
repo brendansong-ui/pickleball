@@ -1210,37 +1210,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Video Tutorials */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-base font-black text-gray-900 mb-1">Video Tutorials</h3>
-              <p className="text-xs text-gray-400 mb-4">Watch and learn the essential shots</p>
-              <div className="flex flex-col gap-3">
-                {[
-                  { title: "Complete Beginner's Guide to Pickleball", channel: "Pickleball University", id: "I1p7NwhGPOc" },
-                  { title: "How to Serve — Beginner Lesson", channel: "Pickleball University", id: "v6QWUweWmMc" },
-                  { title: "How to Dink (The Right Way)", channel: "Pickleball Channel", id: "5-ty-cyg6sI" },
-                  { title: "3rd Shot Drop — Master It", channel: "Pickleball Channel", id: "xu6pukeV32w" },
-                ].map((video, i) => (
-                  <a key={i} href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: "linear-gradient(135deg, #ff0000, #cc0000)" }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 leading-tight">{video.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{video.channel} · YouTube</p>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                      <path d="M9 18l6-6-6-6"/>
-                    </svg>
-                  </a>
-                ))}
-              </div>
-            </div>
-
             {/* Glossary */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <h3 className="text-base font-black text-gray-900 mb-4">Common Terms</h3>
