@@ -215,6 +215,7 @@ async function fetchGames(token) {
     endTime: g.end_time,
     courts: g.courts || 1,
     createdByName: g.created_by_name || g.created_by || null,
+    createdByEmail: g.created_by || null,
     players: registrations
       .filter((r) => r.game_id === g.id && !r.is_waitlist)
       .sort((a, b) => (b.is_host ? 1 : 0) - (a.is_host ? 1 : 0))
@@ -657,7 +658,14 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                         </svg>
                       </button>
                     </div>
-                    {game.createdByName && <p className="text-xs text-gray-400 mt-0.5">Hosted by {game.createdByName}</p>}
+                    {game.createdByName && (
+                      <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                        Hosted by {game.createdByName}
+                        {game.createdByEmail === `${ADMIN_LINE_USER_ID.toLowerCase()}@line.user` && (
+                          <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-full">Admin</span>
+                        )}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     {canEdit && (
@@ -840,7 +848,12 @@ function GameCard({ game, onClick }) {
             </div>
             <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
             {game.createdByName && (
-              <p className="text-xs text-gray-400 mt-0.5">🏅 Host: {game.createdByName}</p>
+              <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                🏅 Host: {game.createdByName}
+                {game.createdByEmail === `${ADMIN_LINE_USER_ID.toLowerCase()}@line.user` && (
+                  <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-full">Admin</span>
+                )}
+              </p>
             )}
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
