@@ -1372,6 +1372,7 @@ const COURTS = [
       "A dividing net separates the two courts, which limits ATP shots and sharper cross-court angles. Not an issue for casual social games though.",
     ],
     mapUrl: "https://www.google.com/maps/place/PicklePark+%E5%8C%B9%E5%85%8B%E5%85%AC%E5%9C%92%E5%AE%A4%E5%85%A7%E5%8C%B9%E5%85%8B%E7%90%83%E5%A0%B4+%E5%8C%97%E5%B1%AF%E5%A0%B4/@24.1902471,120.6747083,17z/data=!3m1!4b1!4m6!3m5!1s0x346917c4c4292985:0x10e19d72d673d8c4!8m2!3d24.1902471!4d120.6772832!16s%2Fg%2F11yy_z8r8b",
+    instagramUrl: "https://www.instagram.com/picklepark_official",
     color: "#1e3a5f",
   },
   {
@@ -1397,6 +1398,7 @@ const COURTS = [
       "Weekend slots book up quickly — plan ahead and reserve early.",
     ],
     mapUrl: "https://www.google.com/maps/place/%E5%8C%B9%E5%85%8B%E7%8E%8B+PICKLE+KING%EF%BD%9C%E5%8C%B9%E5%85%8B%E7%90%83%E9%81%8B%E5%8B%95%E9%A4%90%E5%BB%B3/@24.1477486,120.6194094,17z/data=!3m1!4b1!4m6!3m5!1s0x34693d402c00a82b:0x8b8ca9677840d2be!8m2!3d24.1477486!4d120.6219843!16s%2Fg%2F11z1t8nynv",
+    instagramUrl: "https://www.instagram.com/pickleking.bistro",
     bookingUrl: "https://pickleball-king.com.tw",
     color: "#7c3aed",
   },
@@ -1421,6 +1423,7 @@ const COURTS = [
       "Court rental is on the pricier side, so worth booking in advance to make the most of your session.",
     ],
     mapUrl: "https://www.google.com/maps/place/LaLa+Dink+%7C+Pickleball+club+%E5%8C%B9%E5%85%8B%E7%90%83%E4%BF%B1%E6%A8%82%E9%83%A8/@24.1347622,120.6344121,17z/data=!3m1!4b1!4m6!3m5!1s0x34693d56ce4231f5:0x36dbbe4962b2ed8d!8m2!3d24.1347622!4d120.636987!16s%2Fg%2F11x_mmx_36",
+    instagramUrl: "https://www.instagram.com/laladink.pbc",
     bookingUrl: "https://tinybot.cc/laladink/bookingcourt/",
     color: "#059669",
   },
@@ -1522,11 +1525,18 @@ function CourtDetailModal({ court, onClose, user, token }) {
               style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
               Open in Maps
             </a>
+            {court.instagramUrl && (
+              <a href={court.instagramUrl} target="_blank" rel="noopener noreferrer"
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-center text-white"
+                style={{ background: "linear-gradient(135deg, #833ab4, #e1306c)" }}>
+                📸 Photos
+              </a>
+            )}
             {court.bookingUrl && (
               <a href={court.bookingUrl} target="_blank" rel="noopener noreferrer"
                 className="flex-1 py-2.5 rounded-xl text-xs font-bold text-center text-white"
                 style={{ background: "#06C755" }}>
-                Book a Court
+                Book
               </a>
             )}
           </div>
