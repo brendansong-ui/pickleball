@@ -129,10 +129,6 @@ async function upsertProfile(userId, data, token) {
   return sbFetch("profiles", {
     method: "POST",
     prefer: "return=representation,resolution=merge-duplicates",
-    headers: {
-      "Prefer": "return=representation,resolution=merge-duplicates",
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({ id: userId, ...data }),
   }, token);
 }
