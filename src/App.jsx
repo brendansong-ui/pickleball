@@ -1289,11 +1289,13 @@ export default function App() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h2 className="text-base font-black text-gray-900 mb-2">Welcome to Pickleball Taichung!</h2>
             <p className="text-sm text-gray-500 leading-relaxed mb-4">
-              This is your community spot for finding games, meeting fellow players, and getting on the court. Browse upcoming games, grab a spot, and just show up. Simple as that.
+              Your home for everything pickleball in Taichung. Whether you're here to find a game, learn the sport, or connect with fellow players — you're in the right place.
               <br /><br />
-              To join or host a game, simply sign in with your LINE account.
+              Browse upcoming games and grab your spot. Pick up tips and rules in the Learn tab. Watch tutorials and highlights in the Watch tab.
               <br /><br />
-              See you on the court!
+              Want to host a game? Sign in with LINE, set up your session, and let the community come to you.
+              <br /><br />
+              Simple, fun, and built for the community. See you on the court.
             </p>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">A few house rules to keep things fun for everyone</p>
             <div className="flex flex-col gap-2.5">
