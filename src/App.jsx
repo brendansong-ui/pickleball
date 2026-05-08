@@ -1630,8 +1630,18 @@ export default function App() {
                 courts: 2,
                 price: "NT$600/hr (off-peak) · NT$800/hr (peak)",
                 hours: "Mon–Fri 09:00–18:00 off-peak · Mon–Fri 18:00–23:00 peak · Weekends 09:00–23:00 peak",
-                notes: "Book in advance. Non-marking shoes required.",
-                mapUrl: "https://maps.google.com/?q=PicklePark+匹克公園室內匹克球場+北屯場&ll=24.1902471,120.6772832",
+                highlights: [
+                  "Excellent court surface with 30+ demo paddles to test for free — great for trying before you buy",
+                  "Plenty of balls on hand, making it ideal for drilling and solo practice sessions",
+                  "Ball machine available if you want to work on your game alone",
+                  "Stylish space with lounge sofas — perfect for booking the whole venue for a private event",
+                  "Small merch corner selling their own branded gear plus paddles from Luzz, Everyday Social Japan, Friday, Selkirk, Bread & Butter, Napa and more",
+                ],
+                goodToKnow: [
+                  "Ventilation is the main drawback — it can get hot and humid on warm days, and mosquitoes make an appearance. The owner is reportedly working on getting AC installed, so this should improve soon.",
+                  "A dividing net separates the two courts, which limits ATP shots and sharper cross-court angles. Not an issue for casual social games though.",
+                ],
+                mapUrl: "https://www.google.com/maps/place/PicklePark+%E5%8C%B9%E5%85%8B%E5%85%AC%E5%9C%92%E5%AE%A4%E5%85%A7%E5%8C%B9%E5%85%8B%E7%90%83%E5%A0%B4+%E5%8C%97%E5%B1%AF%E5%A0%B4/@24.1902471,120.6747083,17z/data=!3m1!4b1!4m6!3m5!1s0x346917c4c4292985:0x10e19d72d673d8c4!8m2!3d24.1902471!4d120.6772832!16s%2Fg%2F11yy_z8r8b",
                 color: "#1e3a5f",
               },
               {
@@ -1641,8 +1651,21 @@ export default function App() {
                 courts: 6,
                 price: "NT$1,000–1,200/hr (2 premium courts with social zone at NT$1,200)",
                 hours: "Daily 09:00–22:00",
-                notes: "Professional competition-grade venue. 2 courts include a player lounge area.",
-                mapUrl: "https://maps.google.com/?q=匹克王+PICKLE+KING&ll=24.1477486,120.6219843",
+                highlights: [
+                  "Conveniently located just off Highway 74, easy to get to from most parts of Taichung",
+                  "Plenty of free parking — the owner claims 400+ spaces, including at the adjacent fish market",
+                  "A weekend food market is literally steps away, perfect for a post-game bite or extending the social",
+                  "Proper club atmosphere — lounge area with sports on screen, food and drinks served including alcohol",
+                  "Clean, well-maintained shower and bathroom facilities on-site",
+                  "Good court surface and lighting throughout",
+                  "Official partner with Taichung brand NAPA — lots of their paddles available to test on the day",
+                  "The team runs the venue like a proper club and takes player feedback seriously",
+                ],
+                goodToKnow: [
+                  "Court rental is on the pricier side compared to other venues in Taichung.",
+                  "Weekend slots book up quickly — plan ahead and reserve early.",
+                ],
+                mapUrl: "https://www.google.com/maps/place/%E5%8C%B9%E5%85%8B%E7%8E%8B+PICKLE+KING%EF%BD%9C%E5%8C%B9%E5%85%8B%E7%90%83%E9%81%8B%E5%8B%95%E9%A4%90%E5%BB%B3/@24.1477486,120.6194094,17z/data=!3m1!4b1!4m6!3m5!1s0x34693d402c00a82b:0x8b8ca9677840d2be!8m2!3d24.1477486!4d120.6219843!16s%2Fg%2F11z1t8nynv",
                 color: "#7c3aed",
               },
               {
@@ -1652,8 +1675,14 @@ export default function App() {
                 courts: 6,
                 price: "NT$600–1,200/hr depending on time · Weekday mornings cheapest, weekends & evenings most expensive",
                 hours: "Open 24 hours · By reservation only",
-                notes: "English-friendly. Food & drinks available. All ages welcome. Lessons and clinics available.",
-                mapUrl: "https://maps.google.com/?q=LaLa+Dink+Pickleball+Club&ll=24.1347622,120.636987",
+                highlights: [
+                  "English-friendly venue — staff and booking website are accessible in English",
+                  "Food and drinks available on-site",
+                  "All ages and skill levels welcome",
+                  "Lessons, clinics, and DUPR-rated events available",
+                ],
+                goodToKnow: [],
+                mapUrl: "https://www.google.com/maps/place/LaLa+Dink+%7C+Pickleball+club+%E5%8C%B9%E5%85%8B%E7%90%83%E4%BF%B1%E6%A8%82%E9%83%A8/@24.1347622,120.6344121,17z/data=!3m1!4b1!4m6!3m5!1s0x34693d56ce4231f5:0x36dbbe4962b2ed8d!8m2!3d24.1347622!4d120.636987!16s%2Fg%2F11x_mmx_36",
                 bookingUrl: "https://tinybot.cc/laladink/bookingcourt/",
                 color: "#059669",
               },
@@ -1686,14 +1715,37 @@ export default function App() {
                       <span className="flex-shrink-0">🕐</span>
                       <span>{court.hours}</span>
                     </div>
-                    {court.notes && (
-                      <div className="flex items-start gap-2">
-                        <span className="flex-shrink-0">💡</span>
-                        <span>{court.notes}</span>
-                      </div>
-                    )}
                   </div>
-                  <div className="flex items-center justify-between">
+
+                  {court.highlights?.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Highlights</p>
+                      <div className="flex flex-col gap-1.5">
+                        {court.highlights.map((h, i) => (
+                          <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
+                            <span className="text-green-500 flex-shrink-0 mt-0.5">✓</span>
+                            <span>{h}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {court.goodToKnow?.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Good to Know</p>
+                      <div className="flex flex-col gap-1.5">
+                        {court.goodToKnow.map((g, i) => (
+                          <div key={i} className="flex items-start gap-2 text-xs text-gray-500">
+                            <span className="text-amber-500 flex-shrink-0 mt-0.5">!</span>
+                            <span>{g}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-1">
                     <span className="text-xs text-gray-300">Tap to open in Maps</span>
                     <div className="flex items-center gap-2">
                       {court.bookingUrl && (
