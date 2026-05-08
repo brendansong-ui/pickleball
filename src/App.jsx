@@ -129,7 +129,10 @@ async function upsertProfile(userId, data, token) {
   return sbFetch("profiles", {
     method: "POST",
     prefer: "return=representation,resolution=merge-duplicates",
-    headers: { "Prefer": "return=representation,resolution=merge-duplicates" },
+    headers: {
+      "Prefer": "return=representation,resolution=merge-duplicates",
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({ id: userId, ...data }),
   }, token);
 }
@@ -360,11 +363,8 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
   return (
     <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
       <button className="flex items-center gap-2.5 flex-1 min-w-0 text-left" onClick={() => {
-        console.log("Player tapped:", player.name, "userId:", player.userId);
         if (player.userId && onViewProfile) {
           onViewProfile(player.userId);
-        } else {
-          console.log("No userId for player:", player.name);
         }
       }}>
         <Avatar url={player.avatarUrl} name={player.name} size={7} />
