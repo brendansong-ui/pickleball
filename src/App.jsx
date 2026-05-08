@@ -214,6 +214,7 @@ async function fetchGames(token) {
     endTime: g.end_time,
     courts: g.courts || 1,
     notes: g.notes || null,
+    registrationOpen: g.registration_open !== false,
     createdByName: g.created_by_name || g.created_by || null,
     createdByEmail: g.created_by || null,
     players: registrations
@@ -249,7 +250,7 @@ async function createGame(data, token) {
       end_time: data.endTime || null, location: data.location,
       location_url: data.locationUrl || null, max_players: data.maxPlayers,
       price: data.price, courts: data.courts || 1, notes: data.notes || null,
-      created_by: data.createdBy || null, created_by_name: data.createdByName || null,
+      registration_open: true,
     }),
   }, token);
   if (result && result[0] && data.createdBy) {
@@ -283,6 +284,13 @@ async function updateGame(gameId, data, token) {
 async function deleteGame(gameId, token) {
   await sbFetch(`registrations?game_id=eq.${gameId}`, { method: "DELETE" }, token);
   await sbFetch(`games?id=eq.${gameId}`, { method: "DELETE" }, token);
+}
+
+async function toggleRegistration(gameId, isOpen, token) {
+  return sbFetch(`games?id=eq.${gameId}`, {
+    method: "PATCH", prefer: "return=representation",
+    body: JSON.stringify({ registration_open: isOpen }),
+  }, token);
 }
 
 async function createRegistration(gameId, player, isWaitlist = false) {
@@ -617,7 +625,7 @@ function RegisterModal({ game, onRegister, onClose, user }) {
 }
 
 // Full-screen game detail — uses native scroll, no fixed overlay clipping
-function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAdmin, onDelete, onEdit, onViewProfile }) {
+function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAdmin, onDelete, onEdit, onViewProfile, onToggleRegistration }) {
   const [showRegister, setShowRegister] = useState(false);
   const isFull = game.players.length >= game.maxPlayers;
   const spotsLeft = game.maxPlayers - game.players.length;
@@ -706,6 +714,17 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                     {canEdit && (
                       <button onClick={() => { onEdit(game); onClose(); }}
                         className="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-400 transition-colors">✏️</button>
+                    )}
+                    {canEdit && (
+                      <button onClick={() => onToggleRegistration(game.id, !game.registrationOpen)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-xl transition-colors text-sm ${
+                          game.registrationOpen
+                            ? "bg-green-50 hover:bg-green-100 text-green-500"
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-400"
+                        }`}
+                        title={game.registrationOpen ? "Close registrations" : "Open registrations"}>
+                        {game.registrationOpen ? "🔓" : "🔒"}
+                      </button>
                     )}
                     {canDelete && (
                       <button onClick={handleDelete}
@@ -805,7 +824,12 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
 
                 {/* Action */}
                 <div className="pb-2">
-                  {!isFull ? (
+                  {!game.registrationOpen ? (
+                    <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                      <p className="text-sm font-semibold text-gray-500">🔒 Registrations are closed</p>
+                      <p className="text-xs text-gray-400 mt-1">The host has paused sign-ups for this game.</p>
+                    </div>
+                  ) : !isFull ? (
                   user ? (
                     <button onClick={() => setShowRegister(true)}
                       className="w-full py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
@@ -819,7 +843,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                         className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl mx-auto"
                         style={{ background: "#06C755" }}>
                         <svg width="13" height="13" viewBox="0 0 48 48" fill="white">
-                          <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4zm-6.5 22.5h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm3 0a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v8a1 1 0 0 1-1 1zm9 0h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm5-3.5h-3v-1.5h3a1 1 0 0 1 0 2zm0-3h-3V18.5h3a1 1 0 0 1 0 2z"/>
+                          <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
                         </svg>
                         Sign in with LINE
                       </button>
@@ -839,7 +863,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                         className="flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-xl mx-auto"
                         style={{ background: "#06C755" }}>
                         <svg width="13" height="13" viewBox="0 0 48 48" fill="white">
-                          <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4zm-6.5 22.5h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm3 0a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v8a1 1 0 0 1-1 1zm9 0h-4a1 1 0 0 1-1-1v-8a1 1 0 0 1 2 0v7h3a1 1 0 0 1 0 2zm5-3.5h-3v-1.5h3a1 1 0 0 1 0 2zm0-3h-3V18.5h3a1 1 0 0 1 0 2z"/>
+                          <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
                         </svg>
                         Sign in with LINE
                       </button>
@@ -1878,6 +1902,10 @@ export default function App() {
           onDelete={handleDelete}
           onEdit={(g) => { setGameForm(g); setSelectedGame(null); }}
           onViewProfile={(uid) => setProfileUserId(uid)}
+          onToggleRegistration={async (gameId, isOpen) => {
+            await toggleRegistration(gameId, isOpen, token);
+            await loadGames();
+          }}
         />
       )}
 
@@ -2008,9 +2036,12 @@ export default function App() {
                 {sorted.length === 0 && !showPastGames
                   ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No upcoming games.</p></div>
                   : <div className="flex flex-col gap-3">
-                      {sorted.map((game) => (
+                      {sorted.slice(sorted.length > 1 ? 1 : 0).map((game) => (
                         <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} isPinned={pinnedGames.includes(game.id)} onTogglePin={handleTogglePin} />
                       ))}
+                      {sorted.length === 1 && (
+                        <p className="text-xs text-gray-300 text-center py-4">Only one game coming up — shown above.</p>
+                      )}
                     </div>
                 }
                 {pastGames.length > 0 && (
