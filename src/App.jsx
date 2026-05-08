@@ -1305,7 +1305,7 @@ export default function App() {
               ))}
             </div>
           </div>
-        )}
+        ) : null}
       </main>
     </div>
   );
