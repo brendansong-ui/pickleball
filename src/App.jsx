@@ -339,12 +339,12 @@ function SpotsBar({ filled, max }) {
   );
 }
 
-function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewProfile }) {
+function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewProfile, isGameHost }) {
   const [leaving, setLeaving] = useState(false);
   const withinCutoff = !canCancelRegistration(game.date, game.time);
 
   async function handleLeave() {
-    if (withinCutoff) {
+    if (withinCutoff && !isAdmin && !isGameHost) {
       alert("You cannot cancel within 24 hours of the game start time.");
       return;
     }
@@ -353,7 +353,9 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
     await onRemove(player.id);
   }
 
-  const showLeaveBtn = (player.canLeave || isAdmin) && !player.isHost;
+  const canRemove = (player.canLeave || isAdmin || isGameHost) && !player.isHost;
+  const showX = (isAdmin || isGameHost) && !player.isHost && !player.canLeave;
+  const showLeave = player.canLeave && !player.isHost;
 
   return (
     <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
@@ -371,12 +373,17 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
             {Number(player.duprRating).toFixed(2)}
           </span>
         )}
-        {showLeaveBtn && (
+        {canRemove && (
           <button onClick={handleLeave} disabled={leaving}
-            className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors disabled:opacity-50
-              ${withinCutoff ? "text-gray-300 cursor-not-allowed" : "text-red-400 hover:text-red-600 hover:bg-red-50"}`}
-            title={withinCutoff ? "Cannot cancel within 24hrs of game" : player.canLeave ? "Leave game" : "Remove player"}>
-            {leaving ? "..." : isAdmin && !player.canLeave ? "✕" : "Leave"}
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors disabled:opacity-50 text-red-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
+            title={player.canLeave ? "Leave game" : "Remove player"}>
+            {leaving ? (
+              <span className="text-xs">...</span>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            )}
           </button>
         )}
       </div>
@@ -733,7 +740,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                     ? <p className="text-sm text-gray-300 text-center py-4">No one registered yet. Be the first!</p>
                     : <div className="flex flex-col gap-2">
                         {game.players.map((p, i) => (
-                          <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
+                          <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
                         ))}
                       </div>
                   }
@@ -747,7 +754,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                     </h3>
                     <div className="flex flex-col gap-2">
                       {game.waitlist.map((p, i) => (
-                        <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={true} isAdmin={isAdmin} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
+                        <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={true} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
                       ))}
                     </div>
                   </div>
@@ -1311,17 +1318,25 @@ export default function App() {
       )}
 
       <header className="bg-white sticky top-0 z-10" style={{ boxShadow: "0 1px 0 rgba(0,0,0,0.06)" }}>
-        <div className="max-w-2xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Taichung Pickleball Community" className="w-9 h-9 object-contain" />
-            <div>
-              <h1 className="font-black text-gray-900 text-sm leading-tight tracking-tight">Pickleball Taichung</h1>
-              <p className="text-xs text-gray-400 tracking-wide">Community · Play · Learn</p>
-            </div>
+        {/* Top row: logo + tabs + avatar */}
+        <div className="max-w-2xl mx-auto px-4 pt-3 pb-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 flex-shrink-0">
+            <img src="/logo.png" alt="Taichung Pickleball Community" className="w-8 h-8 object-contain" />
+            <h1 className="font-black text-gray-900 text-sm leading-tight tracking-tight">Pickleball Taichung</h1>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex gap-0.5 bg-gray-100 rounded-xl p-1">
+              {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "watch", label: "Watch" }, { id: "about", label: "About" }].map((v) => (
+                <button key={v.id} onClick={() => setView(v.id)}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    view === v.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                  }`}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
             {user ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {isAdmin && (
                   <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Admin</span>
                 )}
@@ -1329,36 +1344,16 @@ export default function App() {
                   <Avatar url={user.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url")} name={user.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || user.email} size={8} className="ring-2 ring-white shadow-sm" />
                 </button>
               </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="max-w-2xl mx-auto px-4 pb-3 flex items-center gap-2">
-          {user ? (
-            <button onClick={() => setGameForm({})}
-              className="text-white text-xs font-bold px-4 py-2 rounded-xl hover:opacity-90 flex-shrink-0 active:scale-95 transition-all shadow-sm"
-              style={{ background: "#06C755" }}>
-              + Host a Game
-            </button>
-          ) : (
-            <button onClick={() => signInWithLINE()}
-              className="flex items-center gap-1.5 text-white text-xs font-bold px-4 py-2 rounded-xl hover:opacity-90 flex-shrink-0 active:scale-95 transition-all shadow-sm"
-              style={{ background: "#06C755" }}>
-              <svg width="12" height="12" viewBox="0 0 48 48" fill="white">
-                <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
-              </svg>
-              Sign in to host
-            </button>
-          )}
-          <div className="flex gap-0.5 ml-auto bg-gray-100 rounded-xl p-1">
-            {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "watch", label: "Watch" }, { id: "about", label: "About" }].map((v) => (
-              <button key={v.id} onClick={() => setView(v.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  view === v.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                }`}>
-                {v.label}
+            ) : (
+              <button onClick={() => signInWithLINE()}
+                className="flex items-center gap-1.5 text-white text-xs font-bold px-3 py-2 rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-sm flex-shrink-0"
+                style={{ background: "#06C755" }}>
+                <svg width="11" height="11" viewBox="0 0 48 48" fill="white">
+                  <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
+                </svg>
+                Sign in with LINE
               </button>
-            ))}
+            )}
           </div>
         </div>
       </header>
@@ -1415,6 +1410,30 @@ export default function App() {
             ) : (
               <CalendarView games={games} onGameClick={(game) => setSelectedGame(game)} />
             )}
+
+            {/* Host a Game / Sign in prompt */}
+            <div className="mt-6">
+              {user ? (
+                <button onClick={() => setGameForm({})}
+                  className="w-full py-3.5 rounded-2xl text-sm font-bold text-white active:scale-95 transition-all"
+                  style={{ background: "linear-gradient(135deg, #06C755, #05a847)" }}>
+                  + Host a Game
+                </button>
+              ) : (
+                <div className="bg-white rounded-2xl p-4 text-center" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                  <p className="text-sm font-semibold text-gray-700 mb-1">Want to host a game?</p>
+                  <p className="text-xs text-gray-400 mb-3">Sign in with your LINE account to get started</p>
+                  <button onClick={() => signInWithLINE()}
+                    className="flex items-center gap-2 text-white text-sm font-bold px-5 py-2.5 rounded-xl mx-auto active:scale-95 transition-all"
+                    style={{ background: "#06C755" }}>
+                    <svg width="14" height="14" viewBox="0 0 48 48" fill="white">
+                      <path d="M24 4C12.95 4 4 11.86 4 21.5c0 7.6 5.4 14.18 13.3 17.14.58.2.98.74.86 1.34l-.7 3.6c-.1.52.4.96.9.72l4.38-2.18c.38-.2.82-.24 1.22-.1A25.7 25.7 0 0 0 24 42c11.05 0 20-7.86 20-17.5S35.05 4 24 4z"/>
+                    </svg>
+                    Sign in with LINE
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         ) : view === "learn" ? (
           <div className="flex flex-col gap-6">
