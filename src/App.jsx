@@ -2036,7 +2036,7 @@ export default function App() {
         <div className="max-w-2xl mx-auto px-4 pt-3 pb-1 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Pickleballen" className="w-8 h-8 object-contain" />
-            <h1 className="font-black text-gray-900 text-sm leading-tight tracking-tight">Pickleballen</h1>
+            <h1 className="font-black text-gray-900 text-sm leading-tight tracking-tight">Pickleballen | Taichung</h1>
           </div>
           {user ? (
             <div className="flex items-center gap-1.5">
@@ -2364,7 +2364,7 @@ export default function App() {
           <div className="flex flex-col gap-4">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center text-center">
               <img src="/logo.png" alt="Pickleballen" className="w-24 h-24 object-contain mb-4" />
-              <h2 className="text-xl font-black text-gray-900 mb-1">Pickleballen</h2>
+              <h2 className="text-xl font-black text-gray-900 mb-1">Pickleballen | Taichung</h2>
               <p className="text-xs text-gray-400 tracking-wide">Pickleball in Taichung</p>
             </div>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
