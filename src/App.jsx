@@ -2099,7 +2099,13 @@ export default function App() {
               }
 
               return (
-                <div className="relative mb-4">
+                <div className="relative mb-2">
+                  {/* Next Game label */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">Next Game</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+
                   <button onClick={() => setSelectedGame(next)}
                     className="w-full text-left rounded-2xl overflow-hidden active:scale-[0.99] transition-all"
                     style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)", boxShadow: "0 4px 12px rgba(30,58,95,0.25)" }}>
@@ -2130,7 +2136,7 @@ export default function App() {
                   {heroMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setHeroMenuOpen(false)} />
-                      <div className="absolute top-12 right-2 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-w-44">
+                      <div className="absolute top-16 right-2 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-w-44">
                         <button onClick={(e) => { heroShare(e); setHeroMenuOpen(false); }}
                           className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 text-left">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2156,8 +2162,13 @@ export default function App() {
             })()}
 
             {/* List / Calendar toggle */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Upcoming Games</h2>
+            <div className="flex items-center justify-between mb-4 mt-2">
+              <div className="flex items-center gap-2 flex-1 mr-3">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">
+                  {playView === "list" ? "More Games" : "Calendar"}
+                </span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
               <button onClick={() => setPlayView(playView === "list" ? "calendar" : "list")}
                 className="text-xs font-semibold text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors">
                 {playView === "list" ? (
