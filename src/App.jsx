@@ -1289,6 +1289,75 @@ function AdminLoginModal({ onSuccess, onClose }) {
   );
 }
 
+const VIDEOS = [
+  { id: "I1p7NwhGPOc", title: "Complete Beginner's Guide", tag: "Beginner" },
+  { id: "USVMB5zEzIc", title: "Dinking Master Class", tag: "Technique" },
+  { id: "xu6pukeV32w", title: "The Perfect 3rd Shot Drop", tag: "Technique" },
+  { id: "v6QWUweWmMc", title: "How to Serve", tag: "Beginner" },
+  { id: "SJi8zR4hdKs", title: "Confusing Rules Explained", tag: "Rules" },
+  { id: "G1fNM-pM9gM", title: "How to Dink — 5 Keys", tag: "Technique" },
+  { id: "6qz-Sch2IqE", title: "Pickleball Etiquette", tag: "Rules" },
+  { id: "rD1O3R9B0Sw", title: "Ultimate Rules Guide", tag: "Rules" },
+];
+
+function VideoRow() {
+  const [activeId, setActiveId] = useState(null);
+  const tagColors = {
+    Beginner: { bg: "#eff6ff", color: "#3b82f6" },
+    Technique: { bg: "#faf5ff", color: "#a855f7" },
+    Rules: { bg: "#f0fdf4", color: "#22c55e" },
+  };
+
+  return (
+    <div>
+      {activeId && (
+        <div className="mb-3 rounded-2xl overflow-hidden bg-gray-50">
+          <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+            <iframe
+              className="absolute inset-0 w-full h-full"
+              src={`https://www.youtube.com/embed/${activeId}?rel=0&modestbranding=1&autoplay=1`}
+              title="Pickleball video"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+          <div className="px-3 py-2 flex items-center justify-between">
+            <p className="text-xs font-semibold text-gray-700">{VIDEOS.find(v => v.id === activeId)?.title}</p>
+            <button onClick={() => setActiveId(null)} className="text-xs text-gray-400 hover:text-gray-600 ml-2">✕</button>
+          </div>
+        </div>
+      )}
+      <div className="flex gap-3 overflow-x-auto pb-2" style={{ WebkitOverflowScrolling: "touch" }}>
+        {VIDEOS.map((video) => (
+          <button key={video.id} onClick={() => setActiveId(activeId === video.id ? null : video.id)}
+            className={`flex-shrink-0 w-40 rounded-xl overflow-hidden text-left active:scale-95 transition-all border-2 ${activeId === video.id ? "border-blue-400" : "border-transparent"}`}>
+            <div className="relative" style={{ paddingBottom: "56.25%" }}>
+              <img
+                src={`https://img.youtube.com/vi/${video.id}/mqdefault.jpg`}
+                alt={video.title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+              </div>
+            </div>
+            <div className="p-2 bg-gray-50">
+              <p className="text-xs font-semibold text-gray-700 leading-tight mb-1 line-clamp-2">{video.title}</p>
+              <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                style={{ background: tagColors[video.tag].bg, color: tagColors[video.tag].color }}>
+                {video.tag}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function GlossarySection() {
   const [open, setOpen] = useState(false);
   const terms = [
@@ -2230,42 +2299,8 @@ export default function App() {
             {/* Videos section */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <h3 className="text-base font-black text-gray-900 mb-1">Watch & Learn</h3>
-              <p className="text-xs text-gray-400 mb-4">The best pickleball content to watch</p>
-              <div className="flex flex-col gap-3">
-                {[
-                  { id: "I1p7NwhGPOc", title: "Complete Beginner's Guide to Pickleball", tag: "Beginner" },
-                  { id: "USVMB5zEzIc", title: "Dinking Master Class", tag: "Technique" },
-                  { id: "xu6pukeV32w", title: "The Perfect 3rd Shot Drop", tag: "Technique" },
-                  { id: "v6QWUweWmMc", title: "How to Serve — Beginner Lesson", tag: "Beginner" },
-                  { id: "SJi8zR4hdKs", title: "Confusing Pickleball Rules Explained", tag: "Rules" },
-                  { id: "G1fNM-pM9gM", title: "How to Dink — 5 Keys for Beginners", tag: "Technique" },
-                  { id: "6qz-Sch2IqE", title: "Pickleball Etiquette Rules", tag: "Rules" },
-                  { id: "rD1O3R9B0Sw", title: "Ultimate Guide to Pickleball Rules", tag: "Rules" },
-                ].map((video) => (
-                  <div key={video.id} className="bg-gray-50 rounded-2xl overflow-hidden">
-                    <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-                      <iframe
-                        className="absolute inset-0 w-full h-full"
-                        src={`https://www.youtube.com/embed/${video.id}?rel=0&modestbranding=1`}
-                        title={video.title}
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
-                    <div className="px-3 py-2.5 flex items-center justify-between">
-                      <p className="text-sm font-semibold text-gray-800 leading-tight flex-1 mr-3">{video.title}</p>
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
-                        style={{
-                          background: video.tag === "Beginner" ? "#eff6ff" : video.tag === "Rules" ? "#f0fdf4" : "#faf5ff",
-                          color: video.tag === "Beginner" ? "#3b82f6" : video.tag === "Rules" ? "#22c55e" : "#a855f7",
-                        }}>
-                        {video.tag}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <p className="text-xs text-gray-400 mb-4">Tap a video to play</p>
+              <VideoRow />
             </div>
 
           </div>
