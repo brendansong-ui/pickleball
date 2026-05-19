@@ -1289,6 +1289,30 @@ function AdminLoginModal({ onSuccess, onClose }) {
   );
 }
 
+function LearnSection({ title, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-5 py-4 text-left">
+        <h3 className="text-base font-black text-gray-900">{title}</h3>
+        <div className="flex items-center gap-2">
+          {!open && <span className="text-xs text-gray-300">Tap to expand</span>}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5"
+            className={`transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`}>
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+      </button>
+      {open && (
+        <div className="px-5 pb-5 border-t border-gray-50">
+          <div className="pt-4">{children}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const VIDEOS = [
   { id: "I1p7NwhGPOc", title: "Complete Beginner's Guide", tag: "Beginner" },
   { id: "USVMB5zEzIc", title: "Dinking Master Class", tag: "Technique" },
@@ -2248,55 +2272,81 @@ export default function App() {
             </div>
           </>
         ) : view === "learn" ? (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
 
-            {/* Hero */}
-            <div className="rounded-2xl overflow-hidden relative" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-              <div className="p-6">
-                <p className="text-xs font-bold text-blue-300 uppercase tracking-widest mb-1">Learn Pickleball</p>
-                <h2 className="text-2xl font-black text-white leading-tight mb-2">New to the game?</h2>
-                <p className="text-sm text-blue-200 leading-relaxed">Everything you need to get on the court with confidence.</p>
+            {/* Autoplay rally clip */}
+            <div className="rounded-2xl overflow-hidden bg-black" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+              <div className="relative w-full" style={{ height: "480px" }}>
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src="https://www.youtube.com/embed/pE3om-Lgtis?autoplay=1&mute=1&loop=1&playlist=pE3om-Lgtis&rel=0&modestbranding=1&controls=1"
+                  title="Top Pickleball Plays"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <div className="px-4 py-3 bg-gray-900">
+                <p className="text-xs font-semibold text-white">This is what pickleball looks like 🏓</p>
+                <p className="text-xs text-gray-400 mt-0.5">Still want to sit on the sidelines?</p>
               </div>
             </div>
 
-            {/* What is Pickleball */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-base font-black text-gray-900 mb-3">What is Pickleball?</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">
-                  Pickleball is a racket sport that combines elements of tennis, badminton, and table tennis. It's played on a small court with a solid paddle and a perforated plastic ball. The sport is easy to learn, low-impact, and suitable for all ages and fitness levels.
-                </p>
-                <p className="text-sm text-gray-500 leading-relaxed mt-3">
-                  The court is about a quarter of the size of a tennis court, making rallies faster and more fun. Points are only scored by the serving team, and the first team to reach 11 points (win by 2) wins the game.
-                </p>
-            </div>
-
-            {/* Basic Rules */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-base font-black text-gray-900 mb-4">Basic Rules</h3>
-              <div className="flex flex-col gap-3">
+            {/* What is Pickleball + Basic Rules merged */}
+            <LearnSection
+              title="What is Pickleball?"
+              defaultOpen={true}>
+              <p className="text-sm text-gray-500 leading-relaxed mb-3">
+                Pickleball combines elements of tennis, badminton, and table tennis. Played on a small court with a solid paddle and a perforated plastic ball — easy to learn, low-impact, and fun at any level.
+              </p>
+              <div className="flex flex-col gap-2">
                 {[
-                  { title: "The Kitchen", desc: "The 7-foot zone on each side of the net is called the Non-Volley Zone (NVZ) or 'kitchen'. You cannot volley the ball while standing in it." },
-                  { title: "The Two-Bounce Rule", desc: "After the serve, the ball must bounce once on each side before either team can volley. This prevents rushing the net on the serve." },
-                  { title: "Serving", desc: "Serves must be underhand and hit diagonally to the opponent's service box. The ball must clear the kitchen and land in bounds." },
-                  { title: "Scoring", desc: "Only the serving team can score points. Games are played to 11 points, win by 2. In tournaments, games may go to 15 or 21." },
-                  { title: "Faults", desc: "Hitting into the net, out of bounds, volleying from the kitchen, or not letting the ball bounce when required are all faults." },
+                  { title: "The Kitchen", desc: "The 7-foot zone near the net is the Non-Volley Zone. You can't volley while standing in it." },
+                  { title: "Two-Bounce Rule", desc: "After the serve, the ball must bounce once on each side before either team can volley." },
+                  { title: "Serving", desc: "Serves must be underhand, hit diagonally across the net, and must clear the kitchen." },
+                  { title: "Scoring", desc: "Only the serving team scores. First to 11 points, win by 2." },
+                  { title: "Faults", desc: "Hitting out of bounds, into the net, volleying from the kitchen, or skipping the two-bounce rule." },
                 ].map((rule, i) => (
                   <div key={i} className="flex gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-black mt-0.5"
-                      style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>{i + 1}</div>
+                    <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-black mt-0.5"
+                      style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)", fontSize: 9 }}>{i + 1}</div>
                     <div>
-                      <p className="text-sm font-bold text-gray-800">{rule.title}</p>
+                      <p className="text-xs font-bold text-gray-800">{rule.title}</p>
                       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{rule.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </LearnSection>
 
             {/* Glossary */}
-            <GlossarySection />
+            <LearnSection title="Common Terms">
+              <div className="flex flex-col gap-1">
+                {[
+                  { term: "Dink", def: "A soft shot that lands in or near the kitchen, forcing the opponent to hit upward." },
+                  { term: "Kitchen", def: "The Non-Volley Zone — the 7-foot area closest to the net on each side." },
+                  { term: "Erne", def: "An advanced shot where you jump around the kitchen post to volley the ball." },
+                  { term: "Lob", def: "A high, deep shot intended to go over the opponent's head when they're at the net." },
+                  { term: "Stacking", def: "A doubles strategy where both players position on the same side of the court." },
+                  { term: "Bangers", def: "Players who prefer hard drives instead of the soft dinking game." },
+                  { term: "ATP", def: "Around the Post — hitting the ball around the net post instead of over it. Legal and impressive." },
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-3 py-2 border-b border-gray-50 last:border-0">
+                    <span className="text-sm font-bold text-blue-800 w-20 flex-shrink-0">{item.term}</span>
+                    <span className="text-sm text-gray-500 leading-relaxed">{item.def}</span>
+                  </div>
+                ))}
+              </div>
+            </LearnSection>
 
-            {/* Find a Coach — Coming Soon */}
+            {/* Watch & Learn */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="text-base font-black text-gray-900 mb-1">Watch & Learn</h3>
+              <p className="text-xs text-gray-400 mb-4">Tap a video to play</p>
+              <VideoRow />
+            </div>
+
+            {/* Find a Coach */}
             <div className="rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center">
               <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
@@ -2305,13 +2355,6 @@ export default function App() {
               </div>
               <p className="text-sm font-bold text-gray-700 mb-3">Find a Coach</p>
               <span className="text-xs font-bold px-3 py-1.5 rounded-full text-blue-600 bg-blue-50">Coming Soon</span>
-            </div>
-
-            {/* Videos section */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-base font-black text-gray-900 mb-1">Watch & Learn</h3>
-              <p className="text-xs text-gray-400 mb-4">Tap a video to play</p>
-              <VideoRow />
             </div>
 
           </div>
