@@ -933,14 +933,6 @@ function GameCard({ game, onClick }) {
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-gray-900 text-base leading-tight">{game.title}</h3>
               <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
-              {game.createdByName && (
-                <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-                  🏅 Host: {game.createdByName}
-                  {game.createdByEmail === `${ADMIN_LINE_USER_ID.toLowerCase()}@line.user` && (
-                    <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-full">Admin</span>
-                  )}
-                </p>
-              )}
             </div>
 
             {/* Right side: status + ellipsis */}
@@ -1287,6 +1279,41 @@ function AdminLoginModal({ onSuccess, onClose }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function GlossarySection() {
+  const [open, setOpen] = useState(false);
+  const terms = [
+    { term: "Dink", def: "A soft shot that lands in or near the kitchen, forcing the opponent to hit upward." },
+    { term: "Kitchen", def: "The Non-Volley Zone (NVZ) — the 7-foot area closest to the net on each side." },
+    { term: "Erne", def: "An advanced shot where you jump around the kitchen post to volley the ball." },
+    { term: "Lob", def: "A high, deep shot intended to go over the opponent's head when they're at the net." },
+    { term: "Stacking", def: "A doubles strategy where both players position themselves on the same side of the court." },
+    { term: "Bangers", def: "Players who prefer to hit hard drives instead of playing the soft dinking game." },
+    { term: "ATP", def: "Around the Post — hitting the ball around the net post instead of over it. Legal and impressive." },
+  ];
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between p-5 text-left">
+        <h3 className="text-base font-black text-gray-900">Common Terms</h3>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5"
+          className={`transition-transform ${open ? "rotate-180" : ""}`}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="px-5 pb-5 flex flex-col gap-2 border-t border-gray-50">
+          {terms.map((item, i) => (
+            <div key={i} className="flex gap-3 py-2 border-b border-gray-50 last:border-0">
+              <span className="text-sm font-bold text-blue-800 w-20 flex-shrink-0">{item.term}</span>
+              <span className="text-sm text-gray-500 leading-relaxed">{item.def}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1727,10 +1754,6 @@ function CourtsTab({ user, token }) {
                       {court.courts && <span className="text-xs text-gray-400">{court.courts} courts</span>}
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1.5 text-xs text-gray-500 mb-2">
-                    <div className="flex items-start gap-2"><span className="flex-shrink-0">💵</span><span>{court.price}</span></div>
-                    <div className="flex items-start gap-2"><span className="flex-shrink-0">🕐</span><span>{court.hours}</span></div>
-                  </div>
                   <p className="text-xs text-gray-300 text-right mt-1">Tap to see details & reviews →</p>
                 </div>
               </button>
@@ -1898,7 +1921,11 @@ export default function App() {
           {user ? (
             <div className="flex items-center gap-1.5">
               {isAdmin && (
-                <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Admin</span>
+                <span title="Admin mode" className="text-emerald-500">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V7L12 2z"/>
+                  </svg>
+                </span>
               )}
               <button onClick={() => setProfileUserId(user.id)} className="focus:outline-none">
                 <Avatar url={user.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url")} name={user.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || user.email} size={8} className="ring-2 ring-white shadow-sm" />
@@ -1919,7 +1946,7 @@ export default function App() {
         {/* Row 2: tabs */}
         <div className="max-w-2xl mx-auto px-4 pb-2">
           <div className="flex gap-0.5 bg-gray-100 rounded-xl p-1 w-full">
-            {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "watch", label: "Watch" }, { id: "courts", label: "Courts" }, { id: "about", label: "About" }].map((v) => (
+            {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "courts", label: "Courts" }, { id: "about", label: "About" }].map((v) => (
               <button key={v.id} onClick={() => setView(v.id)}
                 className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all relative ${
                   view === v.id
@@ -1935,12 +1962,7 @@ export default function App() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-5">
-        {isAdmin && (
-          <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 flex items-center justify-between">
-            <p className="text-xs font-semibold text-emerald-600">🛡 Admin mode — you can delete any game</p>
-            <button onClick={() => setIsAdmin(false)} className="text-xs text-emerald-400 hover:text-emerald-600 font-semibold">Exit</button>
-          </div>
-        )}        {loading ? (
+        {loading ? (
           <div className="flex items-center justify-center py-24 text-gray-300 text-sm">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-400 rounded-full animate-spin" />
@@ -1981,16 +2003,13 @@ export default function App() {
                     style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)", boxShadow: "0 4px 12px rgba(30,58,95,0.25)" }}>
                     <div className="p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold text-blue-300 uppercase tracking-widest">Next Up</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-white bg-white/20 px-2.5 py-1 rounded-full">{timeLabel}</span>
-                          <button onClick={(e) => { e.stopPropagation(); setHeroMenuOpen(v => !v); }}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
-                            </svg>
-                          </button>
-                        </div>
+                        <span className="text-xs font-bold text-white bg-white/20 px-2.5 py-1 rounded-full">{timeLabel}</span>
+                        <button onClick={(e) => { e.stopPropagation(); setHeroMenuOpen(v => !v); }}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                          </svg>
+                        </button>
                       </div>
                       <h3 className="text-lg font-black text-white leading-tight mb-1">{next.title}</h3>
                       <p className="text-xs text-blue-200 mb-3">📍 {next.location}</p>
@@ -2037,27 +2056,25 @@ export default function App() {
             {/* List / Calendar toggle */}
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Upcoming Games</h2>
-              <div className="flex bg-gray-100 rounded-xl p-1 gap-0.5">
-                <button onClick={() => setPlayView("list")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    playView === "list" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                  }`}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-                    <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-                  </svg>
-                  List
-                </button>
-                <button onClick={() => setPlayView("calendar")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    playView === "calendar" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-                  }`}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                  </svg>
-                  Calendar
-                </button>
-              </div>
+              <button onClick={() => setPlayView(playView === "list" ? "calendar" : "list")}
+                className="text-xs font-semibold text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors">
+                {playView === "list" ? (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    Calendar
+                  </>
+                ) : (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                      <line x1="3" y1="6" x2="3.01" y2="6"/>
+                    </svg>
+                    List
+                  </>
+                )}
+              </button>
             </div>
 
             {playView === "list" ? (
@@ -2164,25 +2181,7 @@ export default function App() {
             </div>
 
             {/* Glossary */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-base font-black text-gray-900 mb-4">Common Terms</h3>
-              <div className="flex flex-col gap-2">
-                {[
-                  { term: "Dink", def: "A soft shot that lands in or near the kitchen, forcing the opponent to hit upward." },
-                  { term: "Kitchen", def: "The Non-Volley Zone (NVZ) — the 7-foot area closest to the net on each side." },
-                  { term: "Erne", def: "An advanced shot where you jump around the kitchen post to volley the ball." },
-                  { term: "Lob", def: "A high, deep shot intended to go over the opponent's head when they're at the net." },
-                  { term: "Stacking", def: "A doubles strategy where both players position themselves on the same side of the court." },
-                  { term: "Bangers", def: "Players who prefer to hit hard drives instead of playing the soft dinking game." },
-                  { term: "ATP", def: "Around the Post — hitting the ball around the net post instead of over it. Legal and impressive." },
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-3 py-2 border-b border-gray-50 last:border-0">
-                    <span className="text-sm font-bold text-blue-800 w-20 flex-shrink-0">{item.term}</span>
-                    <span className="text-sm text-gray-500 leading-relaxed">{item.def}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <GlossarySection />
 
             {/* Find a Coach — Coming Soon */}
             <div className="rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center">
@@ -2195,47 +2194,47 @@ export default function App() {
               <span className="text-xs font-bold px-3 py-1.5 rounded-full text-blue-600 bg-blue-50">Coming Soon</span>
             </div>
 
-          </div>
-        ) : view === "watch" ? (
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Watch & Learn</h2>
-              <p className="text-xs text-gray-300">Scroll through the best pickleball content</p>
+            {/* Videos section */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="text-base font-black text-gray-900 mb-1">Watch & Learn</h3>
+              <p className="text-xs text-gray-400 mb-4">The best pickleball content to watch</p>
+              <div className="flex flex-col gap-3">
+                {[
+                  { id: "I1p7NwhGPOc", title: "Complete Beginner's Guide to Pickleball", tag: "Beginner" },
+                  { id: "USVMB5zEzIc", title: "Dinking Master Class", tag: "Technique" },
+                  { id: "xu6pukeV32w", title: "The Perfect 3rd Shot Drop", tag: "Technique" },
+                  { id: "v6QWUweWmMc", title: "How to Serve — Beginner Lesson", tag: "Beginner" },
+                  { id: "SJi8zR4hdKs", title: "Confusing Pickleball Rules Explained", tag: "Rules" },
+                  { id: "G1fNM-pM9gM", title: "How to Dink — 5 Keys for Beginners", tag: "Technique" },
+                  { id: "6qz-Sch2IqE", title: "Pickleball Etiquette Rules", tag: "Rules" },
+                  { id: "rD1O3R9B0Sw", title: "Ultimate Guide to Pickleball Rules", tag: "Rules" },
+                ].map((video) => (
+                  <div key={video.id} className="bg-gray-50 rounded-2xl overflow-hidden">
+                    <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                      <iframe
+                        className="absolute inset-0 w-full h-full"
+                        src={`https://www.youtube.com/embed/${video.id}?rel=0&modestbranding=1`}
+                        title={video.title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                    <div className="px-3 py-2.5 flex items-center justify-between">
+                      <p className="text-sm font-semibold text-gray-800 leading-tight flex-1 mr-3">{video.title}</p>
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+                        style={{
+                          background: video.tag === "Beginner" ? "#eff6ff" : video.tag === "Rules" ? "#f0fdf4" : "#faf5ff",
+                          color: video.tag === "Beginner" ? "#3b82f6" : video.tag === "Rules" ? "#22c55e" : "#a855f7",
+                        }}>
+                        {video.tag}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {[
-              { id: "I1p7NwhGPOc", title: "Complete Beginner's Guide to Pickleball", tag: "Beginner" },
-              { id: "USVMB5zEzIc", title: "Dinking Master Class", tag: "Technique" },
-              { id: "xu6pukeV32w", title: "The Perfect 3rd Shot Drop", tag: "Technique" },
-              { id: "v6QWUweWmMc", title: "How to Serve — Beginner Lesson", tag: "Beginner" },
-              { id: "SJi8zR4hdKs", title: "Confusing Pickleball Rules Explained", tag: "Rules" },
-              { id: "G1fNM-pM9gM", title: "How to Dink — 5 Keys for Beginners", tag: "Technique" },
-              { id: "6qz-Sch2IqE", title: "Pickleball Etiquette Rules", tag: "Rules" },
-              { id: "rD1O3R9B0Sw", title: "Ultimate Guide to Pickleball Rules", tag: "Rules" },
-            ].map((video) => (
-              <div key={video.id} className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-                  <iframe
-                    className="absolute inset-0 w-full h-full"
-                    src={`https://www.youtube.com/embed/${video.id}?rel=0&modestbranding=1`}
-                    title={video.title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-                <div className="px-4 py-3 flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-800 leading-tight flex-1 mr-3">{video.title}</p>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
-                    style={{
-                      background: video.tag === "Beginner" ? "#eff6ff" : video.tag === "Rules" ? "#f0fdf4" : "#faf5ff",
-                      color: video.tag === "Beginner" ? "#3b82f6" : video.tag === "Rules" ? "#22c55e" : "#a855f7",
-                    }}>
-                    {video.tag}
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
         ) : view === "courts" ? (
           <CourtsTab user={user} token={token} />
