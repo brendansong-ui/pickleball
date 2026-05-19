@@ -692,7 +692,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                       <button onClick={(e) => {
                         e.stopPropagation();
                         const text = `🏓 ${game.title}\n📍 ${game.location}\n📅 ${new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(game.time)}${game.endTime ? `–${displayTime(game.endTime)}` : ""}\n${game.price > 0 ? `NT$${Number(game.price).toFixed(0)}/player` : "Free"}\n\nJoin here: ${window.location.href}`;
-                        if (navigator.share) { navigator.share({ title: "Pickleball Taichung", text }); }
+                        if (navigator.share) { navigator.share({ title: "Pickleballen | Taichung", text }); }
                         else { navigator.clipboard.writeText(text); alert("Game details copied!"); }
                       }} className="text-gray-300 hover:text-gray-500 transition-colors" title="Share">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -900,7 +900,7 @@ function GameCard({ game, onClick }) {
     setMenuOpen(false);
     const text = `🏓 ${game.title}\n📍 ${game.location}\n📅 ${new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(game.time)}${game.endTime ? `–${displayTime(game.endTime)}` : ""}\n${game.price > 0 ? `💵 NT$${Number(game.price).toFixed(0)}/player` : "🆓 Free"}\n\nJoin here: ${window.location.href}`;
     if (navigator.share) {
-      navigator.share({ title: "Pickleball Taichung", text });
+      navigator.share({ title: "Pickleballen | Taichung", text });
     } else {
       navigator.clipboard.writeText(text);
       alert("Game details copied!");
@@ -2035,7 +2035,7 @@ export default function App() {
         {/* Row 1: logo + sign in / avatar */}
         <div className="max-w-2xl mx-auto px-4 pt-3 pb-1 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Taichung Pickleball Community" className="w-8 h-8 object-contain" />
+            <img src="/logo.png" alt="Pickleballen" className="w-8 h-8 object-contain" />
             <h1 className="font-black text-gray-900 text-sm leading-tight tracking-tight">Pickleballen</h1>
           </div>
           {user ? (
@@ -2109,7 +2109,7 @@ export default function App() {
               function heroShare(e) {
                 e.stopPropagation();
                 const text = `🏓 ${next.title}\n📍 ${next.location}\n📅 ${new Date(next.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(next.time)}${next.endTime ? `–${displayTime(next.endTime)}` : ""}\n${next.price > 0 ? `NT$${Number(next.price).toFixed(0)}/player` : "Free"}\n\nJoin here: ${window.location.href}`;
-                if (navigator.share) { navigator.share({ title: "Pickleball Taichung", text }); }
+                if (navigator.share) { navigator.share({ title: "Pickleballen | Taichung", text }); }
                 else { navigator.clipboard.writeText(text); alert("Game details copied!"); }
               }
 
