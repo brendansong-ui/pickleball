@@ -2036,7 +2036,7 @@ export default function App() {
         <div className="max-w-2xl mx-auto px-4 pt-3 pb-1 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Taichung Pickleball Community" className="w-8 h-8 object-contain" />
-            <h1 className="font-black text-gray-900 text-sm leading-tight tracking-tight">Pickleball Taichung</h1>
+            <h1 className="font-black text-gray-900 text-sm leading-tight tracking-tight">Pickleballen</h1>
           </div>
           {user ? (
             <div className="flex items-center gap-1.5">
@@ -2362,21 +2362,18 @@ export default function App() {
           <CourtsTab user={user} token={token} />
         ) : view === "about" ? (
           <div className="flex flex-col gap-4">
-            {/* Hero with logo */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center text-center">
-              <img src="/logo.png" alt="Pickleball Taichung" className="w-24 h-24 object-contain mb-4" />
-              <h2 className="text-xl font-black text-gray-900 mb-1">Pickleball Taichung</h2>
-              <p className="text-xs text-gray-400 tracking-wide">Community · Play · Learn</p>
+              <img src="/logo.png" alt="Pickleballen" className="w-24 h-24 object-contain mb-4" />
+              <h2 className="text-xl font-black text-gray-900 mb-1">Pickleballen</h2>
+              <p className="text-xs text-gray-400 tracking-wide">Pickleball in Taichung</p>
             </div>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <p className="text-sm text-gray-500 leading-relaxed">
-                Pickleball is one of the fastest-growing sports in the world right now — and Taiwan is no exception. Taichung even hosted the 2024 Asia Pickleball Games, putting our city firmly on the map.
+                Pickleball is one of the fastest growing sports in the world right now. Did you know Taichung hosted the 2024 Asia Pickleball Games?
                 <br /><br />
-                Whether you're a total beginner or already chasing your DUPR rating, this is the place to find your next game, discover courts around the city, and connect with fellow players.
+                Whether you're a total beginner or already chasing your DUPR rating, this is your spot. Find a game, discover courts, and meet new people. Sign in with LINE to host or join a game.
                 <br /><br />
-                Browse games in the Play tab. Learn the rules in Learn. Watch tutorials in Watch. Find courts in Courts.
-                <br /><br />
-                Sign in with LINE to host or join a game. See you on the court.
+                Let's get Pickleballen.
               </p>
             </div>
           </div>
