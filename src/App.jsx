@@ -217,6 +217,7 @@ async function fetchGames(token) {
     registrationOpen: g.registration_open !== false,
     createdByName: g.created_by_name || g.created_by || null,
     createdByEmail: g.created_by || null,
+    isUserRegistered: registrations.filter(r => r.game_id === g.id && !r.is_waitlist).some(r => !!myTokens[r.id] && myTokens[r.id] === r.guest_token),
     players: registrations
       .filter((r) => r.game_id === g.id && !r.is_waitlist)
       .sort((a, b) => (b.is_host ? 1 : 0) - (a.is_host ? 1 : 0))
@@ -938,9 +939,14 @@ function GameCard({ game, onClick }) {
             {/* Right side: status + ellipsis */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
               <div className="flex items-center gap-1.5">
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
-                  {isFull ? "Full" : "Open"}
-                </span>
+                {game.isUserRegistered && (
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">✓ Joined</span>
+                )}
+                {!game.isUserRegistered && (
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
+                    {isFull ? "Full" : "Open"}
+                  </span>
+                )}
                 {/* Ellipsis button */}
                 <button onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}
                   className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-colors relative z-20">
@@ -1784,6 +1790,20 @@ export default function App() {
   const [playView, setPlayView] = useState("list");
   const [showPastGames, setShowPastGames] = useState(false);
   const [heroMenuOpen, setHeroMenuOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [tabLoading, setTabLoading] = useState(false);
+
+  function showToast(message) {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  function switchTab(id) {
+    if (id === view) return;
+    setTabLoading(true);
+    setView(id);
+    setTimeout(() => setTabLoading(false), 300);
+  }
 
   useEffect(() => {
     // Prevent pinch-to-zoom on iOS Safari
@@ -1826,7 +1846,6 @@ export default function App() {
   }
 
   async function handleRegister(gameId, player, isWaitlist = false) {
-    // Fetch latest DUPR from profile if user is signed in
     let duprRating = player.duprRating;
     if (user?.id && !duprRating) {
       const profile = await fetchProfile(user.id, token);
@@ -1835,6 +1854,7 @@ export default function App() {
     await createRegistration(gameId, { ...player, duprRating, userId: user?.id || null }, isWaitlist);
     if (user?.id) await incrementGamesPlayed(user.id, token);
     await loadGames();
+    showToast(isWaitlist ? "You're on the waitlist! We'll let you know if a spot opens up." : "You're in! See you on the court. 🏓");
   }
 
   async function handleRemovePlayer(registrationId) {
@@ -1870,6 +1890,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: "#f8f9fb" }}>
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl text-sm font-semibold text-white shadow-lg max-w-xs text-center transition-all"
+          style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
+          {toast}
+        </div>
+      )}
       {profileUserId && (
         <ProfileModal
           userId={profileUserId}
@@ -1947,7 +1974,7 @@ export default function App() {
         <div className="max-w-2xl mx-auto px-4 pb-2">
           <div className="flex gap-0.5 bg-gray-100 rounded-xl p-1 w-full">
             {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "courts", label: "Courts" }, { id: "about", label: "About" }].map((v) => (
-              <button key={v.id} onClick={() => setView(v.id)}
+              <button key={v.id} onClick={() => switchTab(v.id)}
                 className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all relative ${
                   view === v.id
                     ? v.id === "games" ? "text-white shadow-sm" : "bg-white text-gray-900 shadow-sm"
@@ -1968,6 +1995,12 @@ export default function App() {
               <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-400 rounded-full animate-spin" />
               Loading games...
             </div>
+          </div>
+        ) : tabLoading ? (
+          <div className="flex flex-col gap-3 animate-pulse">
+            <div className="h-32 bg-white rounded-2xl" />
+            <div className="h-24 bg-white rounded-2xl" />
+            <div className="h-24 bg-white rounded-2xl" />
           </div>
         ) : view === "games" ? (
           <>
