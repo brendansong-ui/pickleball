@@ -2276,18 +2276,18 @@ export default function App() {
 
             {/* Autoplay rally clip */}
             <div className="rounded-2xl overflow-hidden bg-black" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
-              <div className="relative w-full" style={{ height: "480px" }}>
+              <div className="relative mx-auto" style={{ width: "100%", maxWidth: 270, height: 480 }}>
                 <iframe
                   className="absolute inset-0 w-full h-full"
                   src="https://www.youtube.com/embed/pE3om-Lgtis?autoplay=1&mute=1&loop=1&playlist=pE3om-Lgtis&rel=0&modestbranding=1&controls=1"
-                  title="Top Pickleball Plays"
+                  title="Pickleball rally"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
               </div>
               <div className="px-4 py-3 bg-gray-900">
-                <p className="text-xs font-semibold text-white">This is what pickleball looks like 🏓</p>
+                <p className="text-xs font-semibold text-white">This is what pickleball looks like</p>
                 <p className="text-xs text-gray-400 mt-0.5">Still want to sit on the sidelines?</p>
               </div>
             </div>
