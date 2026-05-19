@@ -1462,9 +1462,13 @@ function CalendarView({ games, onGameClick }) {
             return (
               <button key={day}
                 onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                className={`relative mx-auto w-10 h-10 flex flex-col items-center justify-center rounded-xl text-sm font-medium transition-all active:scale-95
-                  ${isSelected ? "text-white shadow-sm" : isToday ? "font-bold" : isPast ? "text-gray-300" : "text-gray-700"}`}
-                style={isSelected ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" } : isToday ? { color: "#1e3a5f" } : {}}>
+                className={`relative mx-auto w-10 h-10 flex flex-col items-center justify-center rounded-xl text-sm font-bold transition-all active:scale-95
+                  ${isSelected ? "text-white shadow-sm" : isToday ? "" : isPast ? "text-gray-300 font-normal" : "text-gray-700 font-normal"}`}
+                style={
+                  isSelected ? { background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }
+                  : isToday ? { color: "#1e3a5f", border: "2px solid #1e3a5f", borderRadius: "50%" }
+                  : {}
+                }>
                 {day}
                 {hasGames && <span className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : "bg-green-400"}`} />}
               </button>
