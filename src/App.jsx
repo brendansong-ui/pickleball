@@ -361,14 +361,22 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
       alert("You cannot cancel within 24 hours of the game start time.");
       return;
     }
-    if (!window.confirm(`Are you sure you want to cancel your spot for ${player.name}? This cannot be undone.`)) return;
     setLeaving(true);
-    await onRemove(player.id);
+    try {
+      await onRemove(player.id);
+    } catch (e) {
+      alert("Error removing player: " + e.message);
+    }
+    setLeaving(false);
   }
 
   async function handlePromote() {
     setPromoting(true);
-    await onPromote(player.id);
+    try {
+      await onPromote(player.id);
+    } catch (e) {
+      alert("Error promoting player: " + e.message);
+    }
     setPromoting(false);
   }
 
