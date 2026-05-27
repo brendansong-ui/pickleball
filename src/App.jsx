@@ -375,20 +375,20 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
   const canRemove = (player.canLeave || isAdmin || isGameHost) && !player.isHost;
 
   return (
-    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
-      <button className="flex items-center gap-2.5 flex-1 min-w-0 text-left" onClick={() => {
+    <div className="flex items-center bg-gray-50 rounded-xl px-3 py-2.5 gap-2">
+      <div className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer" onClick={() => {
         if (player.userId && onViewProfile) {
           onViewProfile(player.userId);
         }
       }}>
         <Avatar url={player.avatarUrl} name={player.name} size={7} />
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={`text-sm font-medium ${player.userId ? "text-gray-700" : "text-gray-500"}`}>{player.name}</span>
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+          <span className={`text-sm font-medium truncate ${player.userId ? "text-gray-700" : "text-gray-500"}`}>{player.name}</span>
           {player.isHost && <span className="text-xs font-bold text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full">Host</span>}
           {isWaitlist && <span className="text-xs text-amber-500 font-semibold">#{index + 1} waitlist</span>}
         </div>
-      </button>
-      <div className="flex items-center gap-2 flex-shrink-0">
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
         {player.duprRating != null && (
           <span className="text-xs font-bold text-blue-500">
             DUPR {Number(player.duprRating).toFixed(2)}
@@ -397,9 +397,9 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
         {/* Promote button — only for waitlist, only for admin/host */}
         {isWaitlist && (isAdmin || isGameHost) && onPromote && (
           <button
-            onClick={handlePromote}
+            onClick={(e) => { e.stopPropagation(); handlePromote(); }}
             disabled={promoting}
-            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors disabled:opacity-50 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 flex-shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors disabled:opacity-50 text-emerald-500 bg-emerald-50 active:bg-emerald-100 flex-shrink-0"
             title="Move to roster">
             {promoting ? (
               <span className="text-xs">...</span>
