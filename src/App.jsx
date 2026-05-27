@@ -305,8 +305,8 @@ async function createRegistration(gameId, player, isWaitlist = false) {
   return result;
 }
 
-async function deleteRegistration(registrationId) {
-  return sbFetch(`registrations?id=eq.${registrationId}`, { method: "DELETE" });
+async function deleteRegistration(registrationId, token) {
+  return sbFetch(`registrations?id=eq.${registrationId}`, { method: "DELETE" }, token);
 }
 
 // NEW: promote a waitlisted player to the main roster
@@ -367,9 +367,9 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
   }
 
   async function handlePromote() {
-    if (!window.confirm(`Move ${player.name} from the waitlist to the roster?`)) return;
     setPromoting(true);
     await onPromote(player.id);
+    setPromoting(false);
   }
 
   const canRemove = (player.canLeave || isAdmin || isGameHost) && !player.isHost;
@@ -1921,14 +1921,24 @@ export default function App() {
   }
 
   async function handleRemovePlayer(registrationId) {
-    await deleteRegistration(registrationId);
-    await loadGames();
+    try {
+      await deleteRegistration(registrationId, token);
+      await loadGames();
+    } catch (e) {
+      console.error("Remove failed:", e.message);
+      alert("Failed to remove player: " + e.message);
+    }
   }
 
   async function handlePromotePlayer(registrationId) {
-    await promoteFromWaitlist(registrationId, token);
-    await loadGames();
-    showToast("Player moved to the roster! 🏓");
+    try {
+      await promoteFromWaitlist(registrationId, token);
+      await loadGames();
+      showToast("Player moved to the roster! 🏓");
+    } catch (e) {
+      console.error("Promote failed:", e.message);
+      alert("Failed to promote player: " + e.message);
+    }
   }
 
   async function handleSaveGame(data) {
