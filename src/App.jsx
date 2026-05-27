@@ -310,11 +310,11 @@ async function deleteRegistration(registrationId) {
 }
 
 // NEW: promote a waitlisted player to the main roster
-async function promoteFromWaitlist(registrationId) {
+async function promoteFromWaitlist(registrationId, token) {
   return sbFetch(`registrations?id=eq.${registrationId}`, {
     method: "PATCH", prefer: "return=representation",
     body: JSON.stringify({ is_waitlist: false }),
-  });
+  }, token);
 }
 
 function ratingColor(r) {
@@ -1926,7 +1926,7 @@ export default function App() {
   }
 
   async function handlePromotePlayer(registrationId) {
-    await promoteFromWaitlist(registrationId);
+    await promoteFromWaitlist(registrationId, token);
     await loadGames();
     showToast("Player moved to the roster! 🏓");
   }
