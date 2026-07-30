@@ -53,6 +53,7 @@ async function signOut(token) {
 }
 
 async function getSession() {
+  // Handle LINE callback
   const urlParams = new URLSearchParams(window.location.search);
   const lineCode = urlParams.get("code");
   if (lineCode) {
@@ -84,6 +85,7 @@ async function getSession() {
     } catch (e) { console.error("LINE auth error", e); }
   }
 
+  // Handle Google/Supabase OAuth callback
   const hash = window.location.hash;
   if (hash.includes("access_token")) {
     const params = new URLSearchParams(hash.slice(1));
@@ -105,6 +107,7 @@ async function getUser(token) {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: authHeaders(token) });
     if (!res.ok) return null;
     const user = await res.json();
+    // Supplement with LINE profile data if available
     const lineName = sessionStorage.getItem("line_display_name");
     const lineAvatar = sessionStorage.getItem("line_avatar_url");
     if (lineName && !user.user_metadata?.full_name) {
@@ -114,6 +117,7 @@ async function getUser(token) {
   } catch { return null; }
 }
 
+// Profile functions
 async function fetchProfile(userId, token) {
   try {
     const data = await sbFetch(`profiles?id=eq.${userId}&select=*`, {}, token);
@@ -192,6 +196,7 @@ function generateToken() {
   return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
 }
 
+// Check if cancellation is allowed (must be >24hrs before game)
 function canCancelRegistration(gameDate, gameTime) {
   const gameDateTime = new Date(`${gameDate}T${gameTime}`);
   const now = new Date();
@@ -210,9 +215,24 @@ async function fetchGames(token) {
     courts: g.courts || 1,
     notes: g.notes || null,
     registrationOpen: g.registration_open !== false,
+    gameType: g.game_type || "game",
+    blocks: g.blocks || null,
     createdByName: g.created_by_name || g.created_by || null,
     createdByEmail: g.created_by || null,
     isUserRegistered: registrations.filter(r => r.game_id === g.id && !r.is_waitlist).some(r => !!myTokens[r.id] && myTokens[r.id] === r.guest_token),
+    blockRegistrations: g.blocks ? g.blocks.map((_, bi) =>
+      registrations.filter(r => r.game_id === g.id && r.block_index === bi && !r.is_waitlist)
+        .map(r => ({
+          id: r.id,
+          userId: r.user_id || null,
+          name: r.name,
+          duprRating: r.dupr_rating,
+          avatarUrl: r.avatar_url || null,
+          isHost: r.is_host || false,
+          canLeave: !!myTokens[r.id] && myTokens[r.id] === r.guest_token && !r.is_host,
+          userJoined: !!myTokens[r.id] && myTokens[r.id] === r.guest_token,
+        }))
+    ) : null,
     players: registrations
       .filter((r) => r.game_id === g.id && !r.is_waitlist)
       .sort((a, b) => (b.is_host ? 1 : 0) - (a.is_host ? 1 : 0))
@@ -247,6 +267,8 @@ async function createGame(data, token) {
       location_url: data.locationUrl || null, max_players: data.maxPlayers,
       price: data.price, courts: data.courts || 1, notes: data.notes || null,
       registration_open: true,
+      game_type: data.gameType || "game",
+      blocks: data.blocks || null,
     }),
   }, token);
   if (result && result[0] && data.createdBy) {
@@ -298,6 +320,7 @@ async function createRegistration(gameId, player, isWaitlist = false) {
       dupr_rating: player.duprRating || null,
       avatar_url: player.avatarUrl || null,
       user_id: player.userId || null,
+      block_index: player.blockIndex !== undefined ? player.blockIndex : null,
       is_waitlist: isWaitlist, guest_token: guestToken,
     }),
   });
@@ -305,16 +328,8 @@ async function createRegistration(gameId, player, isWaitlist = false) {
   return result;
 }
 
-async function deleteRegistration(registrationId, token) {
-  return sbFetch(`registrations?id=eq.${registrationId}`, { method: "DELETE" }, token);
-}
-
-// NEW: promote a waitlisted player to the main roster
-async function promoteFromWaitlist(registrationId, token) {
-  return sbFetch(`registrations?id=eq.${registrationId}`, {
-    method: "PATCH", prefer: "return=representation",
-    body: JSON.stringify({ is_waitlist: false }),
-  }, token);
+async function deleteRegistration(registrationId) {
+  return sbFetch(`registrations?id=eq.${registrationId}`, { method: "DELETE" });
 }
 
 function ratingColor(r) {
@@ -330,6 +345,7 @@ function displayTime(t) {
   return t.slice(0, 5);
 }
 
+// Today's date string for min date validation
 function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -350,10 +366,8 @@ function SpotsBar({ filled, max }) {
   );
 }
 
-// onPromote is optional — only passed for waitlist rows when admin/host
-function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewProfile, isGameHost, onPromote }) {
+function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewProfile, isGameHost }) {
   const [leaving, setLeaving] = useState(false);
-  const [promoting, setPromoting] = useState(false);
   const withinCutoff = !canCancelRegistration(game.date, game.time);
 
   async function handleLeave() {
@@ -361,62 +375,34 @@ function PlayerRow({ player, game, isWaitlist, index, isAdmin, onRemove, onViewP
       alert("You cannot cancel within 24 hours of the game start time.");
       return;
     }
+    if (!window.confirm(`Are you sure you want to cancel your spot for ${player.name}? This cannot be undone.`)) return;
     setLeaving(true);
-    try {
-      await onRemove(player.id);
-    } catch (e) {
-      alert("Error removing player: " + e.message);
-    }
-    setLeaving(false);
-  }
-
-  async function handlePromote() {
-    setPromoting(true);
-    try {
-      await onPromote(player.id);
-    } catch (e) {
-      alert("Error promoting player: " + e.message);
-    }
-    setPromoting(false);
+    await onRemove(player.id);
   }
 
   const canRemove = (player.canLeave || isAdmin || isGameHost) && !player.isHost;
+  const showX = (isAdmin || isGameHost) && !player.isHost && !player.canLeave;
+  const showLeave = player.canLeave && !player.isHost;
 
   return (
-    <div className="flex items-center bg-gray-50 rounded-xl px-3 py-2.5 gap-2">
-      <div className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer" onClick={() => {
+    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+      <button className="flex items-center gap-2.5 flex-1 min-w-0 text-left" onClick={() => {
         if (player.userId && onViewProfile) {
           onViewProfile(player.userId);
         }
       }}>
         <Avatar url={player.avatarUrl} name={player.name} size={7} />
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-          <span className={`text-sm font-medium truncate ${player.userId ? "text-gray-700" : "text-gray-500"}`}>{player.name}</span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className={`text-sm font-medium ${player.userId ? "text-gray-700" : "text-gray-500"}`}>{player.name}</span>
           {player.isHost && <span className="text-xs font-bold text-green-500 bg-green-50 px-1.5 py-0.5 rounded-full">Host</span>}
           {isWaitlist && <span className="text-xs text-amber-500 font-semibold">#{index + 1} waitlist</span>}
         </div>
-      </div>
-      <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+      </button>
+      <div className="flex items-center gap-2 flex-shrink-0">
         {player.duprRating != null && (
           <span className="text-xs font-bold text-blue-500">
             DUPR {Number(player.duprRating).toFixed(2)}
           </span>
-        )}
-        {/* Promote button — only for waitlist, only for admin/host */}
-        {isWaitlist && (isAdmin || isGameHost) && onPromote && (
-          <button
-            onClick={(e) => { e.stopPropagation(); handlePromote(); }}
-            disabled={promoting}
-            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors disabled:opacity-50 text-emerald-500 bg-emerald-50 active:bg-emerald-100 flex-shrink-0"
-            title="Move to roster">
-            {promoting ? (
-              <span className="text-xs">...</span>
-            ) : (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            )}
-          </button>
         )}
         {canRemove && (
           <button onClick={handleLeave} disabled={leaving}
@@ -480,14 +466,17 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile, onSig
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+        {/* Banner with avatar sitting at the bottom */}
         <div className="relative pb-10" style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)", height: 100 }}>
           <button onClick={onClose} className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/20 text-white text-sm">✕</button>
+          {/* Avatar anchored to bottom-left of banner */}
           <div className="absolute -bottom-10 left-5 ring-4 ring-white rounded-full bg-white">
             <Avatar url={avatarUrl} name={name} size={20} />
           </div>
         </div>
 
         <div className="px-5 pb-5 pt-12">
+          {/* Edit button aligned to right */}
           {isOwnProfile && !editing && (
             <div className="flex justify-end mb-2">
               <button onClick={() => setEditing(true)}
@@ -556,8 +545,11 @@ function ProfileModal({ userId, currentUser, token, onClose, isOwnProfile, onSig
   );
 }
 
-function RegisterModal({ game, onRegister, onClose, user }) {
-  const isFull = game.players.length >= game.maxPlayers;
+function RegisterModal({ game, onRegister, onClose, user, blockIndex }) {
+  const isFull = blockIndex !== null && blockIndex !== undefined
+    ? (game.blockRegistrations?.[blockIndex]?.length || 0) >= (game.blocks?.[blockIndex]?.maxPlayers || 0)
+    : game.players.length >= game.maxPlayers;
+  const block = blockIndex !== null && blockIndex !== undefined ? game.blocks?.[blockIndex] : null;
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "";
   const avatarUrl = user?.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null;
   const [loading, setLoading] = useState(false);
@@ -582,7 +574,7 @@ function RegisterModal({ game, onRegister, onClose, user }) {
           <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-base font-bold text-gray-900">{isFull ? "Join Waitlist" : "Join Game"}</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{game.title}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{game.title}{block ? ` · ${block.label}` : ""}</p>
             </div>
             <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-xl leading-none mt-0.5">✕</button>
           </div>
@@ -607,6 +599,7 @@ function RegisterModal({ game, onRegister, onClose, user }) {
             </div>
           </div>
 
+          {/* House rules */}
           <div className="bg-gray-50 rounded-2xl p-4 mb-4">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">House Rules</p>
             <div className="flex flex-col gap-2">
@@ -626,6 +619,7 @@ function RegisterModal({ game, onRegister, onClose, user }) {
             </div>
           </div>
 
+          {/* Acknowledgement checkbox */}
           <button onClick={() => setAgreed(v => !v)}
             className="flex items-start gap-3 w-full text-left mb-4">
             <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
@@ -652,8 +646,10 @@ function RegisterModal({ game, onRegister, onClose, user }) {
   );
 }
 
-function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAdmin, onDelete, onEdit, onViewProfile, onToggleRegistration, onPromote }) {
+// Full-screen game detail — uses native scroll, no fixed overlay clipping
+function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAdmin, onDelete, onEdit, onViewProfile, onToggleRegistration }) {
   const [showRegister, setShowRegister] = useState(false);
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState(null);
   const isFull = game.players.length >= game.maxPlayers;
   const spotsLeft = game.maxPlayers - game.players.length;
   const isOwner = user && game.created_by === user.email;
@@ -670,8 +666,10 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
     onClose();
   }
 
+  // Prevent background scroll on iOS
   useEffect(() => {
     document.body.style.overflow = "hidden";
+    // Block horizontal swipe (iOS back gesture)
     const el = document.querySelector(".game-detail-scroll");
     if (el) {
       let startX = 0, startY = 0;
@@ -695,12 +693,14 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
   return (
     <>
       {showRegister && (
-        <RegisterModal game={game} user={user} onRegister={async (gid, player, isWaitlist) => {
-          await onRegister(gid, player, isWaitlist);
+        <RegisterModal game={game} user={user} blockIndex={selectedBlockIndex} onRegister={async (gid, player, isWaitlist) => {
+          await onRegister(gid, { ...player, blockIndex: selectedBlockIndex }, isWaitlist);
           setShowRegister(false);
-        }} onClose={() => setShowRegister(false)} />
+          setSelectedBlockIndex(null);
+        }} onClose={() => { setShowRegister(false); setSelectedBlockIndex(null); }} />
       )}
 
+      {/* Full screen overlay with native scroll */}
       <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "rgba(0,0,0,0.5)" }}>
         <div className="flex-1 overflow-y-auto overscroll-contain game-detail-scroll">
           <div className="min-h-full flex items-end sm:items-center justify-center p-4 pt-16">
@@ -720,6 +720,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                       }} className="text-gray-300 hover:text-gray-500 transition-colors" title="Share">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 2l-4 4h3v9h2V6h3l-4-4z"/>
+                          
                           <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
                         </svg>
                       </button>
@@ -784,6 +785,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                   </div>
                 </div>
 
+                {/* Game full banner */}
                 {isFull && (
                   <div className="mb-4 rounded-xl px-4 py-3 flex items-center gap-2.5" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
                     <span className="text-lg">🔒</span>
@@ -794,6 +796,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                   </div>
                 )}
 
+                {/* Host notes */}
                 {game.notes && (
                   <div className="mb-4 bg-blue-50 rounded-xl px-4 py-3">
                     <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">Host Notes</p>
@@ -801,6 +804,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                   </div>
                 )}
 
+                {/* Spots */}
                 <div className="mb-4"><SpotsBar filled={game.players.length} max={game.maxPlayers} /></div>
                 <div className="flex flex-wrap items-center gap-2 mb-5">
                   <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${statusColor}`}>
@@ -836,18 +840,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                     </h3>
                     <div className="flex flex-col gap-2">
                       {game.waitlist.map((p, i) => (
-                        <PlayerRow
-                          key={p.id}
-                          player={p}
-                          game={game}
-                          index={i}
-                          isWaitlist={true}
-                          isAdmin={isAdmin}
-                          isGameHost={isOwner}
-                          onRemove={onRemovePlayer}
-                          onViewProfile={onViewProfile}
-                          onPromote={(isAdmin || isOwner) ? onPromote : undefined}
-                        />
+                        <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={true} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
                       ))}
                     </div>
                   </div>
@@ -859,6 +852,44 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                     <div className="bg-gray-50 rounded-2xl p-4 text-center">
                       <p className="text-sm font-semibold text-gray-500">🔒 Registrations are closed</p>
                       <p className="text-xs text-gray-400 mt-1">The host has paused sign-ups for this game.</p>
+                    </div>
+                  ) : game.gameType === "session" && game.blocks ? (
+                    <div className="flex flex-col gap-3">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sign up for a block</p>
+                      {game.blocks.map((block, bi) => {
+                        const blockPlayers = game.blockRegistrations?.[bi] || [];
+                        const blockFull = blockPlayers.length >= block.maxPlayers;
+                        const userJoined = blockPlayers.some(p => p.userJoined);
+                        const isCoaching = block.label.toLowerCase().includes("coach");
+                        return (
+                          <div key={bi} className={`rounded-2xl p-4 border ${isCoaching ? "bg-purple-50 border-purple-100" : "bg-emerald-50 border-emerald-100"}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className={`text-sm font-bold ${isCoaching ? "text-purple-700" : "text-emerald-700"}`}>{block.label}</p>
+                              <span className="text-xs text-gray-400">{displayTime(block.startTime)} – {displayTime(block.endTime)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-gray-500">{blockPlayers.length}/{block.maxPlayers} joined · {block.price > 0 ? `NT$${block.price}` : "Free"}</span>
+                              {userJoined ? (
+                                <span className="text-xs font-bold text-emerald-600 bg-white px-2.5 py-1 rounded-full border border-emerald-200">✓ Joined</span>
+                              ) : user ? (
+                                <button
+                                  disabled={blockFull}
+                                  onClick={() => { setSelectedBlockIndex(bi); setShowRegister(true); }}
+                                  className="text-xs font-bold px-3 py-1.5 rounded-full text-white disabled:opacity-40 transition-all active:scale-95"
+                                  style={{ background: blockFull ? "#9ca3af" : isCoaching ? "#7c3aed" : "#059669" }}>
+                                  {blockFull ? "Full" : "Join"}
+                                </button>
+                              ) : (
+                                <button onClick={signInWithLINE}
+                                  className="text-xs font-bold px-3 py-1.5 rounded-full text-white"
+                                  style={{ background: "#06C755" }}>
+                                  Sign in
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : !isFull ? (
                   user ? (
@@ -907,6 +938,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
           </div>
         </div>
 
+        {/* Tap outside to close */}
         <div className="absolute inset-0 -z-10" onClick={onClose} />
       </div>
     </>
@@ -949,6 +981,7 @@ function GameCard({ game, onClick }) {
 
   return (
     <div className="relative">
+      {/* Backdrop to close menu */}
       {menuOpen && (
         <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }} />
       )}
@@ -964,16 +997,21 @@ function GameCard({ game, onClick }) {
               <p className="text-xs text-gray-400 mt-0.5">📍 {game.location}</p>
             </div>
 
+            {/* Right side: status + ellipsis */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
               <div className="flex items-center gap-1.5">
-                {game.isUserRegistered && (
+                {game.gameType === "session" && (
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">Session</span>
+                )}
+                {game.gameType !== "session" && game.isUserRegistered && (
                   <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">✓ Joined</span>
                 )}
-                {!game.isUserRegistered && (
+                {game.gameType !== "session" && !game.isUserRegistered && (
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor}`}>
                     {isFull ? "Full" : "Open"}
                   </span>
                 )}
+                {/* Ellipsis button */}
                 <button onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}
                   className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-colors relative z-20">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -997,17 +1035,45 @@ function GameCard({ game, onClick }) {
             }
           </div>
 
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-              {game.players.length} / {game.maxPlayers} joined
-            </span>
-            {almostFull && !isFull && (
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+          {game.gameType === "session" && game.blocks ? (
+            <div className="flex flex-col gap-2 mb-3">
+              {game.blocks.map((block, bi) => {
+                const blockPlayers = game.blockRegistrations?.[bi] || [];
+                const blockFull = blockPlayers.length >= block.maxPlayers;
+                const userJoined = blockPlayers.some(p => p.userJoined);
+                const isCoaching = block.label.toLowerCase().includes("coach");
+                return (
+                  <div key={bi} className={`rounded-xl px-3 py-2.5 border ${isCoaching ? "bg-purple-50 border-purple-100" : "bg-emerald-50 border-emerald-100"}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-xs font-bold ${isCoaching ? "text-purple-700" : "text-emerald-700"}`}>{block.label}</span>
+                      <span className="text-xs text-gray-400">{displayTime(block.startTime)} – {displayTime(block.endTime)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">{blockPlayers.length}/{block.maxPlayers} joined · {block.price > 0 ? `NT$${block.price}` : "Free"}</span>
+                      {userJoined
+                        ? <span className="text-xs font-bold text-emerald-600">✓ Joined</span>
+                        : blockFull
+                          ? <span className="text-xs font-semibold text-red-400">Full</span>
+                          : <span className="text-xs font-bold text-blue-600">Tap to join</span>
+                      }
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {game.players.length} / {game.maxPlayers} joined
               </span>
-            )}
-          </div>
+              {almostFull && !isFull && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center justify-between mt-1">
             <p className="text-xs text-gray-300">Tap card for details</p>
@@ -1015,12 +1081,13 @@ function GameCard({ game, onClick }) {
               onClick={(e) => { e.stopPropagation(); onClick(); }}
               className="text-xs font-bold px-4 py-1.5 rounded-full transition-all active:scale-95 text-white"
               style={{ background: isFull ? "linear-gradient(135deg, #d97706, #f59e0b)" : "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
-              {isFull ? "Waitlist" : "Register →"}
+              {game.gameType === "session" ? "View Session →" : isFull ? "Waitlist" : "Register →"}
             </button>
           </div>
         </div>
       </div>
 
+      {/* Dropdown menu */}
       {menuOpen && (
         <div className="absolute top-10 right-2 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-w-44"
           onClick={(e) => e.stopPropagation()}>
@@ -1064,7 +1131,12 @@ function GameFormModal({ game, onClose, onSave }) {
     courts: game?.courts || 1,
     price: game?.price ?? "",
     notes: game?.notes || "",
+    gameType: game?.gameType || "game",
   });
+  const [blocks, setBlocks] = useState(game?.blocks || [
+    { label: "Coaching Clinic", startTime: "", endTime: "", maxPlayers: 8, price: 0 },
+    { label: "Open Play", startTime: "", endTime: "", maxPlayers: 12, price: 0 },
+  ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -1079,7 +1151,7 @@ function GameFormModal({ game, onClose, onSave }) {
     const onMove = (e) => {
       const dx = Math.abs(e.touches[0].clientX - startX);
       const dy = Math.abs(e.touches[0].clientY - startY);
-      if (dx > dy) e.preventDefault();
+      if (dx > dy) e.preventDefault(); // block horizontal swipe
     };
     el.addEventListener("touchstart", onStart, { passive: true });
     el.addEventListener("touchmove", onMove, { passive: false });
@@ -1102,7 +1174,7 @@ function GameFormModal({ game, onClose, onSave }) {
     const endTime = form.endTimeHr && form.endTimeMin ? `${form.endTimeHr}:${form.endTimeMin}` : "";
     setLoading(true);
     try {
-      await onSave({ ...form, time, endTime, maxPlayers: Number(form.maxPlayers), courts: Number(form.courts), price: Number(form.price) });
+      await onSave({ ...form, time, endTime, maxPlayers: Number(form.maxPlayers), courts: Number(form.courts), price: Number(form.price), gameType: form.gameType, blocks: form.gameType === "session" ? blocks : null });
       onClose();
     } catch (e) { setError("Something went wrong: " + e.message); }
     setLoading(false);
@@ -1117,6 +1189,21 @@ function GameFormModal({ game, onClose, onSave }) {
             <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-xl leading-none">✕</button>
           </div>
           <div className="flex flex-col gap-4">
+
+            {/* Game type toggle */}
+            {!isEdit && (
+              <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
+                <button onClick={() => update("gameType", "game")}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${form.gameType === "game" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400"}`}>
+                  Regular Game
+                </button>
+                <button onClick={() => update("gameType", "session")}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${form.gameType === "session" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400"}`}>
+                  Coaching Session
+                </button>
+              </div>
+            )}
+
             <div>
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Game Title</label>
               <input type="text" placeholder="e.g. Morning Rally" value={form.title}
@@ -1134,14 +1221,16 @@ function GameFormModal({ game, onClose, onSave }) {
             <div>
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Start Time</label>
               <div className="flex gap-2">
-                <select value={form.timeHr} onChange={(e) => update("timeHr", e.target.value)}
+                <select value={form.timeHr}
+                  onChange={(e) => update("timeHr", e.target.value)}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 bg-white">
                   <option value="">Hour</option>
                   {Array.from({length: 24}, (_, i) => String(i).padStart(2,"0")).map(h => (
                     <option key={h} value={h}>{h}</option>
                   ))}
                 </select>
-                <select value={form.timeMin} onChange={(e) => update("timeMin", e.target.value)}
+                <select value={form.timeMin}
+                  onChange={(e) => update("timeMin", e.target.value)}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 bg-white">
                   <option value="">Min</option>
                   {["00","15","30","45"].map(m => (
@@ -1156,14 +1245,16 @@ function GameFormModal({ game, onClose, onSave }) {
                 End Time <span className="normal-case font-normal text-gray-300">(optional)</span>
               </label>
               <div className="flex gap-2">
-                <select value={form.endTimeHr} onChange={(e) => update("endTimeHr", e.target.value)}
+                <select value={form.endTimeHr}
+                  onChange={(e) => update("endTimeHr", e.target.value)}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 bg-white">
                   <option value="">Hour</option>
                   {Array.from({length: 24}, (_, i) => String(i).padStart(2,"0")).map(h => (
                     <option key={h} value={h}>{h}</option>
                   ))}
                 </select>
-                <select value={form.endTimeMin} onChange={(e) => update("endTimeMin", e.target.value)}
+                <select value={form.endTimeMin}
+                  onChange={(e) => update("endTimeMin", e.target.value)}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 bg-white">
                   <option value="">Min</option>
                   {["00","15","30","45"].map(m => (
@@ -1264,6 +1355,61 @@ function GameFormModal({ game, onClose, onSave }) {
                 className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 resize-none" />
               <p className="text-xs text-gray-300 mt-1">Players will see this when they view your game.</p>
             </div>
+
+            {/* Session blocks builder */}
+            {form.gameType === "session" && (
+              <div>
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 block">Session Blocks</label>
+                <div className="flex flex-col gap-3">
+                  {blocks.map((block, bi) => (
+                    <div key={bi} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <input type="text" value={block.label}
+                          onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], label: e.target.value }; setBlocks(b); }}
+                          className="text-sm font-bold text-gray-800 bg-transparent outline-none border-b border-gray-200 flex-1 mr-2 pb-1" />
+                        {blocks.length > 1 && (
+                          <button onClick={() => setBlocks(blocks.filter((_, i) => i !== bi))}
+                            className="text-red-400 text-xs">✕</button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                          <label className="text-xs text-gray-400 mb-1 block">Start</label>
+                          <input type="time" value={block.startTime}
+                            onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], startTime: e.target.value }; setBlocks(b); }}
+                            className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-400 mb-1 block">End</label>
+                          <input type="time" value={block.endTime}
+                            onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], endTime: e.target.value }; setBlocks(b); }}
+                            className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-gray-400 mb-1 block">Max Players</label>
+                          <input type="number" min="1" value={block.maxPlayers}
+                            onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], maxPlayers: Number(e.target.value) }; setBlocks(b); }}
+                            className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-400 mb-1 block">Price (NT$)</label>
+                          <input type="number" min="0" value={block.price}
+                            onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], price: Number(e.target.value) }; setBlocks(b); }}
+                            className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={() => setBlocks([...blocks, { label: "New Block", startTime: "", endTime: "", maxPlayers: 8, price: 0 }])}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100">
+                    + Add Block
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
 
           {error && <p className="text-xs text-red-500 mt-3 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
@@ -1399,6 +1545,41 @@ function VideoRow() {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function GlossarySection() {
+  const [open, setOpen] = useState(false);
+  const terms = [
+    { term: "Dink", def: "A soft shot that lands in or near the kitchen, forcing the opponent to hit upward." },
+    { term: "Kitchen", def: "The Non-Volley Zone (NVZ) — the 7-foot area closest to the net on each side." },
+    { term: "Erne", def: "An advanced shot where you jump around the kitchen post to volley the ball." },
+    { term: "Lob", def: "A high, deep shot intended to go over the opponent's head when they're at the net." },
+    { term: "Stacking", def: "A doubles strategy where both players position themselves on the same side of the court." },
+    { term: "Bangers", def: "Players who prefer to hit hard drives instead of playing the soft dinking game." },
+    { term: "ATP", def: "Around the Post — hitting the ball around the net post instead of over it. Legal and impressive." },
+  ];
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between p-5 text-left">
+        <h3 className="text-base font-black text-gray-900">Common Terms</h3>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5"
+          className={`transition-transform ${open ? "rotate-180" : ""}`}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="px-5 pb-5 flex flex-col gap-2 border-t border-gray-50">
+          {terms.map((item, i) => (
+            <div key={i} className="flex gap-3 py-2 border-b border-gray-50 last:border-0">
+              <span className="text-sm font-bold text-blue-800 w-20 flex-shrink-0">{item.term}</span>
+              <span className="text-sm text-gray-500 leading-relaxed">{item.def}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1630,8 +1811,10 @@ function CourtDetailModal({ court, onClose, user, token }) {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto overscroll-contain game-detail-scroll">
+        {/* Color bar */}
         <div className="h-2 rounded-t-3xl" style={{ background: court.color }} />
         <div className="p-5">
+          {/* Header */}
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
               <h2 className="text-xl font-black text-gray-900">{court.name}</h2>
@@ -1640,12 +1823,14 @@ function CourtDetailModal({ court, onClose, user, token }) {
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 text-lg flex-shrink-0">✕</button>
           </div>
 
+          {/* Quick info */}
           <div className="bg-gray-50 rounded-2xl p-4 flex flex-col gap-2 mb-4 text-xs text-gray-500">
             <div className="flex items-start gap-2"><span>💵</span><span>{court.price}</span></div>
             <div className="flex items-start gap-2"><span>🕐</span><span>{court.hours}</span></div>
             <div className="flex items-center gap-2"><span>🏟</span><span>{court.type} · {court.courts} courts</span></div>
           </div>
 
+          {/* Action buttons */}
           <div className="flex gap-2 mb-5">
             <a href={court.mapUrl} target="_blank" rel="noopener noreferrer"
               className="flex-1 py-2.5 rounded-xl text-xs font-bold text-center text-white"
@@ -1668,6 +1853,7 @@ function CourtDetailModal({ court, onClose, user, token }) {
             )}
           </div>
 
+          {/* Highlights */}
           {court.highlights?.length > 0 && (
             <div className="mb-4">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Highlights</h3>
@@ -1681,6 +1867,7 @@ function CourtDetailModal({ court, onClose, user, token }) {
             </div>
           )}
 
+          {/* Good to know */}
           {court.goodToKnow?.length > 0 && (
             <div className="mb-5">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Good to Know</h3>
@@ -1694,6 +1881,7 @@ function CourtDetailModal({ court, onClose, user, token }) {
             </div>
           )}
 
+          {/* Reviews */}
           <div className="mb-4">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
               Community Reviews {reviews.length > 0 && `(${reviews.length})`}
@@ -1725,6 +1913,7 @@ function CourtDetailModal({ court, onClose, user, token }) {
               </div>
             )}
 
+            {/* Write review */}
             {user ? (
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-xs font-semibold text-gray-500 mb-2">Leave a review</p>
@@ -1786,6 +1975,7 @@ function CourtsTab({ user, token }) {
           <p className="text-sm text-gray-500 leading-relaxed">These are venues our community has personally visited and can vouch for. We'll keep adding more as we explore new spots around Taichung.</p>
         </div>
 
+        {/* Indoor / Outdoor filter */}
         <div className="flex gap-2">
           {["All", "Indoor", "Outdoor"].map(t => (
             <button key={t} onClick={() => setTypeFilter(t)}
@@ -1798,6 +1988,7 @@ function CourtsTab({ user, token }) {
           ))}
         </div>
 
+        {/* District filter */}
         <div className="flex gap-2 overflow-x-auto pb-1">
           {DISTRICTS.map(d => (
             <button key={d} onClick={() => setDistrictFilter(d)}
@@ -1879,6 +2070,7 @@ export default function App() {
   }
 
   useEffect(() => {
+    // Prevent pinch-to-zoom on iOS Safari
     const preventZoom = (e) => { if (e.touches.length > 1) e.preventDefault(); };
     document.addEventListener("touchmove", preventZoom, { passive: false });
     return () => document.removeEventListener("touchmove", preventZoom);
@@ -1892,6 +2084,7 @@ export default function App() {
         if (u) {
           setToken(t); setUser(u);
           if (isAdminUser(u)) setIsAdmin(true);
+          // Create profile if it doesn't exist
           upsertProfile(u.id, {
             display_name: u.user_metadata?.full_name || sessionStorage.getItem("line_display_name") || u.email,
             avatar_url: u.user_metadata?.avatar_url || sessionStorage.getItem("line_avatar_url") || null,
@@ -1929,24 +2122,8 @@ export default function App() {
   }
 
   async function handleRemovePlayer(registrationId) {
-    try {
-      await deleteRegistration(registrationId, token);
-      await loadGames();
-    } catch (e) {
-      console.error("Remove failed:", e.message);
-      alert("Failed to remove player: " + e.message);
-    }
-  }
-
-  async function handlePromotePlayer(registrationId) {
-    try {
-      await promoteFromWaitlist(registrationId, token);
-      await loadGames();
-      showToast("Player moved to the roster! 🏓");
-    } catch (e) {
-      console.error("Promote failed:", e.message);
-      alert("Failed to promote player: " + e.message);
-    }
+    await deleteRegistration(registrationId);
+    await loadGames();
   }
 
   async function handleSaveGame(data) {
@@ -1977,6 +2154,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: "#f8f9fb" }}>
+      {/* Toast notification */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl text-sm font-semibold text-white shadow-lg max-w-xs text-center transition-all"
           style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8e)" }}>
@@ -2012,7 +2190,6 @@ export default function App() {
           onClose={() => setSelectedGame(null)}
           onRegister={handleRegister}
           onRemovePlayer={handleRemovePlayer}
-          onPromote={handlePromotePlayer}
           user={user}
           isAdmin={isAdmin}
           onDelete={handleDelete}
@@ -2026,6 +2203,7 @@ export default function App() {
       )}
 
       <header className="bg-white sticky top-0 z-10" style={{ boxShadow: "0 1px 0 rgba(0,0,0,0.06)" }}>
+        {/* Row 1: logo + sign in / avatar */}
         <div className="max-w-2xl mx-auto px-4 pt-3 pb-1 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Pickleballen" className="w-8 h-8 object-contain" />
@@ -2056,6 +2234,7 @@ export default function App() {
           )}
         </div>
 
+        {/* Row 2: tabs */}
         <div className="max-w-2xl mx-auto px-4 pb-2">
           <div className="flex gap-0.5 bg-gray-100 rounded-xl p-1 w-full">
             {[{ id: "games", label: "Play" }, { id: "learn", label: "Learn" }, { id: "courts", label: "Courts" }, { id: "about", label: "About" }].map((v) => (
@@ -2089,6 +2268,7 @@ export default function App() {
           </div>
         ) : view === "games" ? (
           <>
+            {/* Next Up hero card */}
             {sorted.length > 0 && playView === "list" && (() => {
               const next = sorted[0];
               const isFull = next.players.length >= next.maxPlayers;
@@ -2115,6 +2295,7 @@ export default function App() {
 
               return (
                 <div className="relative mb-2">
+                  {/* Next Game label */}
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">Next Game</span>
                     <div className="flex-1 h-px bg-gray-200" />
@@ -2175,6 +2356,7 @@ export default function App() {
               );
             })()}
 
+            {/* List / Calendar toggle */}
             <div className="flex items-center justify-between mb-4 mt-2">
               <div className="flex items-center gap-2 flex-1 mr-3">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest whitespace-nowrap">
@@ -2236,6 +2418,7 @@ export default function App() {
               <CalendarView games={games} onGameClick={(game) => setSelectedGame(game)} />
             )}
 
+            {/* Host a Game / Sign in prompt */}
             <div className="mt-6">
               {user ? (
                 <button onClick={() => setGameForm({})}
@@ -2261,6 +2444,8 @@ export default function App() {
           </>
         ) : view === "learn" ? (
           <div className="flex flex-col gap-4">
+
+            {/* Autoplay rally clip */}
             <div className="rounded-2xl overflow-hidden bg-black" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
               <div className="relative mx-auto" style={{ width: "100%", maxWidth: 270, height: 480 }}>
                 <iframe
@@ -2278,7 +2463,10 @@ export default function App() {
               </div>
             </div>
 
-            <LearnSection title="What is Pickleball?" defaultOpen={true}>
+            {/* What is Pickleball + Basic Rules merged */}
+            <LearnSection
+              title="What is Pickleball?"
+              defaultOpen={true}>
               <p className="text-sm text-gray-500 leading-relaxed mb-3">
                 Pickleball combines elements of tennis, badminton, and table tennis. Played on a small court with a solid paddle and a perforated plastic ball — easy to learn, low-impact, and fun at any level.
               </p>
@@ -2302,6 +2490,7 @@ export default function App() {
               </div>
             </LearnSection>
 
+            {/* Glossary */}
             <LearnSection title="Common Terms">
               <div className="flex flex-col gap-1">
                 {[
@@ -2321,12 +2510,14 @@ export default function App() {
               </div>
             </LearnSection>
 
+            {/* Watch & Learn */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <h3 className="text-base font-black text-gray-900 mb-1">Watch & Learn</h3>
               <p className="text-xs text-gray-400 mb-4">Tap a video to play</p>
               <VideoRow />
             </div>
 
+            {/* Find a Coach */}
             <div className="rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center">
               <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
@@ -2336,6 +2527,7 @@ export default function App() {
               <p className="text-sm font-bold text-gray-700 mb-3">Find a Coach</p>
               <span className="text-xs font-bold px-3 py-1.5 rounded-full text-blue-600 bg-blue-50">Coming Soon</span>
             </div>
+
           </div>
         ) : view === "courts" ? (
           <CourtsTab user={user} token={token} />
