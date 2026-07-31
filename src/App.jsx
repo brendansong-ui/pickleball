@@ -714,7 +714,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                       <h2 className="text-xl font-black text-gray-900 leading-tight">{game.title}</h2>
                       <button onClick={(e) => {
                         e.stopPropagation();
-                        const text = `🏓 ${game.title}\n📍 ${game.location}\n📅 ${new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(game.time)}${game.endTime ? `–${displayTime(game.endTime)}` : ""}\n${game.price > 0 ? `NT$${Number(game.price).toFixed(0)}/player` : "Free"}\n\nJoin here: ${window.location.href}`;
+                        const text = `🥒 ${game.title}\n📍 ${game.location}\n📅 ${new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(game.time)}${game.endTime ? `–${displayTime(game.endTime)}` : ""}\n${game.price > 0 ? `NT$${Number(game.price).toFixed(0)}/player` : "Free"}\n\nJoin here: ${window.location.href}`;
                         if (navigator.share) { navigator.share({ title: "Pickleballen | Taichung", text }); }
                         else { navigator.clipboard.writeText(text); alert("Game details copied!"); }
                       }} className="text-gray-300 hover:text-gray-500 transition-colors" title="Share">
@@ -959,7 +959,7 @@ function GameCard({ game, onClick }) {
   function handleShare(e) {
     e.stopPropagation();
     setMenuOpen(false);
-    const text = `🏓 ${game.title}\n📍 ${game.location}\n📅 ${new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(game.time)}${game.endTime ? `–${displayTime(game.endTime)}` : ""}\n${game.price > 0 ? `💵 NT$${Number(game.price).toFixed(0)}/player` : "🆓 Free"}\n\nJoin here: ${window.location.href}`;
+    const text = `🥒 ${game.title}\n📍 ${game.location}\n📅 ${new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(game.time)}${game.endTime ? `–${displayTime(game.endTime)}` : ""}\n${game.price > 0 ? `💵 NT$${Number(game.price).toFixed(0)}/player` : "🆓 Free"}\n\nJoin here: ${window.location.href}`;
     if (navigator.share) {
       navigator.share({ title: "Pickleballen | Taichung", text });
     } else {
@@ -1192,15 +1192,18 @@ function GameFormModal({ game, onClose, onSave }) {
 
             {/* Game type toggle */}
             {!isEdit && (
-              <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
-                <button onClick={() => update("gameType", "game")}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${form.gameType === "game" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400"}`}>
-                  Regular Game
-                </button>
-                <button onClick={() => update("gameType", "session")}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${form.gameType === "session" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400"}`}>
-                  Coaching Session
-                </button>
+              <div>
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Game Type</label>
+                <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
+                  <button onClick={() => update("gameType", "game")}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${form.gameType === "game" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400"}`}>
+                    Regular Game
+                  </button>
+                  <button onClick={() => update("gameType", "session")}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${form.gameType === "session" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400"}`}>
+                    Coaching Session
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1360,50 +1363,52 @@ function GameFormModal({ game, onClose, onSave }) {
             {form.gameType === "session" && (
               <div>
                 <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 block">Session Blocks</label>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
                   {blocks.map((block, bi) => (
                     <div key={bi} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
                       <div className="flex items-center justify-between mb-3">
                         <input type="text" value={block.label}
                           onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], label: e.target.value }; setBlocks(b); }}
-                          className="text-sm font-bold text-gray-800 bg-transparent outline-none border-b border-gray-200 flex-1 mr-2 pb-1" />
+                          className="text-sm font-bold text-gray-800 bg-transparent outline-none border-b border-gray-200 flex-1 mr-3 pb-1 focus:border-blue-300" />
                         {blocks.length > 1 && (
                           <button onClick={() => setBlocks(blocks.filter((_, i) => i !== bi))}
-                            className="text-red-400 text-xs">✕</button>
+                            className="text-red-400 text-xs font-semibold flex-shrink-0">Remove</button>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 gap-2 mb-2">
-                        <div>
-                          <label className="text-xs text-gray-400 mb-1 block">Start</label>
-                          <input type="time" value={block.startTime}
-                            onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], startTime: e.target.value }; setBlocks(b); }}
-                            className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none" />
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="text-xs text-gray-400 mb-1 block">Start time</label>
+                            <input type="time" value={block.startTime}
+                              onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], startTime: e.target.value }; setBlocks(b); }}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-gray-400 mb-1 block">End time</label>
+                            <input type="time" value={block.endTime}
+                              onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], endTime: e.target.value }; setBlocks(b); }}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
+                          </div>
                         </div>
-                        <div>
-                          <label className="text-xs text-gray-400 mb-1 block">End</label>
-                          <input type="time" value={block.endTime}
-                            onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], endTime: e.target.value }; setBlocks(b); }}
-                            className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none" />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-xs text-gray-400 mb-1 block">Max Players</label>
-                          <input type="number" min="1" value={block.maxPlayers}
-                            onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], maxPlayers: Number(e.target.value) }; setBlocks(b); }}
-                            className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-400 mb-1 block">Price (NT$)</label>
-                          <input type="number" min="0" value={block.price}
-                            onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], price: Number(e.target.value) }; setBlocks(b); }}
-                            className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm outline-none" />
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="text-xs text-gray-400 mb-1 block">Max players</label>
+                            <input type="number" min="1" value={block.maxPlayers}
+                              onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], maxPlayers: Number(e.target.value) }; setBlocks(b); }}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-gray-400 mb-1 block">Price (NT$)</label>
+                            <input type="number" min="0" value={block.price}
+                              onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], price: Number(e.target.value) }; setBlocks(b); }}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
+                          </div>
                         </div>
                       </div>
                     </div>
                   ))}
                   <button onClick={() => setBlocks([...blocks, { label: "New Block", startTime: "", endTime: "", maxPlayers: 8, price: 0 }])}
-                    className="w-full py-2.5 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100">
+                    className="w-full py-2.5 rounded-xl text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 active:scale-95 transition-all">
                     + Add Block
                   </button>
                 </div>
@@ -2118,7 +2123,7 @@ export default function App() {
     await createRegistration(gameId, { ...player, duprRating, userId: user?.id || null }, isWaitlist);
     if (user?.id) await incrementGamesPlayed(user.id, token);
     await loadGames();
-    showToast(isWaitlist ? "You're on the waitlist! We'll let you know if a spot opens up." : "You're in! See you on the court. 🏓");
+    showToast(isWaitlist ? "You're on the waitlist! We'll let you know if a spot opens up." : "You're in! See you on the court. 🥒");
   }
 
   async function handleRemovePlayer(registrationId) {
@@ -2279,7 +2284,7 @@ export default function App() {
 
               function heroShare(e) {
                 e.stopPropagation();
-                const text = `🏓 ${next.title}\n📍 ${next.location}\n📅 ${new Date(next.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(next.time)}${next.endTime ? `–${displayTime(next.endTime)}` : ""}\n${next.price > 0 ? `NT$${Number(next.price).toFixed(0)}/player` : "Free"}\n\nJoin here: ${window.location.href}`;
+                const text = `🥒 ${next.title}\n📍 ${next.location}\n📅 ${new Date(next.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} ⏰ ${displayTime(next.time)}${next.endTime ? `–${displayTime(next.endTime)}` : ""}\n${next.price > 0 ? `NT$${Number(next.price).toFixed(0)}/player` : "Free"}\n\nJoin here: ${window.location.href}`;
                 if (navigator.share) { navigator.share({ title: "Pickleballen | Taichung", text }); }
                 else { navigator.clipboard.writeText(text); alert("Game details copied!"); }
               }
@@ -2388,7 +2393,7 @@ export default function App() {
             {playView === "list" ? (
               <>
                 {sorted.length === 0 && !showPastGames
-                  ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🏓</p><p>No upcoming games.</p></div>
+                  ? <div className="text-center text-gray-300 text-sm py-16"><p className="text-4xl mb-3">🥒</p><p>No upcoming games.</p></div>
                   : <div className="flex flex-col gap-3">
                       {sorted.slice(1).map((game) => (
                         <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
