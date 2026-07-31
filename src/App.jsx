@@ -1133,10 +1133,7 @@ function GameFormModal({ game, onClose, onSave }) {
     notes: game?.notes || "",
     gameType: game?.gameType || "game",
   });
-  const [blocks, setBlocks] = useState(game?.blocks || [
-    { label: "Coaching Clinic", startTime: "", endTime: "", maxPlayers: 8, price: 0 },
-    { label: "Open Play", startTime: "", endTime: "", maxPlayers: 12, price: 0 },
-  ]);
+  const [blocks, setBlocks] = useState(game?.blocks || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
