@@ -1063,13 +1063,16 @@ function GameCard({ game, onClick }) {
             <span>📅 {new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
             <span>⏰ {displayTime(game.time)}{game.endTime ? `–${displayTime(game.endTime)}` : ""}</span>
             <span>🏟 {game.courts}</span>
-            {game.price > 0
-              ? <span className="text-emerald-600 font-semibold">NT${Number(game.price).toFixed(0)}</span>
-              : <span className="text-emerald-500 font-semibold">Free</span>
-            }
+            {game.gameType === "session" && game.blocks ? (
+              <span className="text-gray-400">Pricing varies by session</span>
+            ) : game.price > 0 ? (
+              <span className="text-emerald-600 font-semibold">NT${Number(game.price).toFixed(0)}</span>
+            ) : (
+              <span className="text-emerald-500 font-semibold">Free</span>
+            )}
           </div>
 
-          {game.gameType === "session" && game.blocks ? (
+          {game.gameType === "session" && game.blocks && (
             <div className="flex flex-col gap-2 mb-3">
               {game.blocks.map((block, bi) => {
                 const blockPlayers = game.blockRegistrations?.[bi] || [];
@@ -1119,7 +1122,9 @@ function GameCard({ game, onClick }) {
                 );
               })}
             </div>
-          ) : (
+          )}
+
+          {game.gameType !== "session" && (
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                 {game.players.length} / {game.maxPlayers} joined
