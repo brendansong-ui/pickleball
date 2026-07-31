@@ -822,40 +822,69 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                 {/* Players */}
                 <div className="mb-4">
                   {game.gameType === "session" && game.blocks ? (
-                    <>
-                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Registered Players</h3>
+                    <div className="flex flex-col gap-3">
+                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Session Blocks</h3>
                       {game.blocks.map((block, bi) => {
                         const blockPlayers = game.blockRegistrations?.[bi] || [];
                         const isCoaching = block.label.toLowerCase().includes("coach");
                         const trainerPlayer = blockPlayers.find(p => p.isHost);
                         const nonTrainerPlayers = blockPlayers.filter(p => !p.isHost);
+                        const blockFull = nonTrainerPlayers.length >= block.maxPlayers;
+                        const userJoined = nonTrainerPlayers.some(p => p.userJoined);
                         return (
-                          <div key={bi} className={`mb-4 rounded-2xl border overflow-hidden ${isCoaching ? "border-purple-100" : "border-emerald-100"}`}>
-                            <div className={`px-4 py-2.5 flex items-center justify-between ${isCoaching ? "bg-purple-50" : "bg-emerald-50"}`}>
-                              <span className={`text-xs font-bold ${isCoaching ? "text-purple-700" : "text-emerald-700"}`}>{block.label}</span>
-                              <span className="text-xs text-gray-400">{nonTrainerPlayers.length}/{block.maxPlayers} players</span>
+                          <div key={bi} className={`rounded-2xl border overflow-hidden ${isCoaching ? "border-purple-100" : "border-emerald-100"}`}>
+                            {/* Block header */}
+                            <div className={`px-4 py-3 ${isCoaching ? "bg-purple-50" : "bg-emerald-50"}`}>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className={`text-sm font-bold ${isCoaching ? "text-purple-700" : "text-emerald-700"}`}>{block.label}</span>
+                                <span className="text-xs text-gray-400">{displayTime(block.startTime)} – {displayTime(block.endTime)}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-500">{nonTrainerPlayers.length}/{block.maxPlayers} players · {block.price > 0 ? `NT$${block.price}` : "Free"}</span>
+                                {!game.registrationOpen ? null : userJoined ? (
+                                  <span className="text-xs font-bold text-emerald-600">✓ Joined</span>
+                                ) : user ? (
+                                  <button
+                                    disabled={blockFull}
+                                    onClick={() => { setSelectedBlockIndex(bi); setShowRegister(true); }}
+                                    className="text-xs font-bold px-3 py-1.5 rounded-full text-white disabled:opacity-40 active:scale-95 transition-all"
+                                    style={{ background: blockFull ? "#9ca3af" : isCoaching ? "#7c3aed" : "#059669" }}>
+                                    {blockFull ? "Full" : "Join"}
+                                  </button>
+                                ) : (
+                                  <button onClick={signInWithLINE}
+                                    className="text-xs font-bold px-3 py-1.5 rounded-full text-white"
+                                    style={{ background: "#06C755" }}>
+                                    Sign in
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                            <div className="p-3 flex flex-col gap-2 bg-white">
-                              {trainerPlayer && (
-                                <div className="flex items-center gap-2.5 bg-purple-50 rounded-xl px-3 py-2">
-                                  <Avatar url={trainerPlayer.avatarUrl} name={trainerPlayer.name} size={7} />
-                                  <div className="flex-1">
-                                    <span className="text-sm font-medium text-gray-700">{trainerPlayer.name}</span>
+                            {/* Players inside block */}
+                            {blockPlayers.length > 0 && (
+                              <div className="bg-white px-4 py-3 flex flex-col gap-2">
+                                {trainerPlayer && (
+                                  <div className="flex items-center gap-2.5 bg-purple-50 rounded-xl px-3 py-2">
+                                    <Avatar url={trainerPlayer.avatarUrl} name={trainerPlayer.name} size={7} />
+                                    <span className="text-sm font-medium text-gray-700 flex-1">{trainerPlayer.name}</span>
+                                    <span className="text-xs font-bold text-purple-600 bg-white px-2 py-0.5 rounded-full border border-purple-200">Trainer</span>
                                   </div>
-                                  <span className="text-xs font-bold text-purple-600 bg-white px-2 py-0.5 rounded-full border border-purple-200">Trainer</span>
-                                </div>
-                              )}
-                              {nonTrainerPlayers.length === 0 && !trainerPlayer
-                                ? <p className="text-xs text-gray-300 text-center py-2">No one signed up yet</p>
-                                : nonTrainerPlayers.map((p, i) => (
-                                    <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
-                                  ))
-                              }
-                            </div>
+                                )}
+                                {nonTrainerPlayers.map((p, i) => (
+                                  <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
+                                ))}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
-                    </>
+                      {!game.registrationOpen && (
+                        <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                          <p className="text-sm font-semibold text-gray-500">🔒 Registrations are closed</p>
+                          <p className="text-xs text-gray-400 mt-1">The host has paused sign-ups for this game.</p>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <>
                       <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
@@ -887,50 +916,13 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                   </div>
                 )}
 
-                {/* Action */}
+                {/* Action — only for non-session games */}
+                {game.gameType !== "session" && (
                 <div className="pb-2">
                   {!game.registrationOpen ? (
                     <div className="bg-gray-50 rounded-2xl p-4 text-center">
                       <p className="text-sm font-semibold text-gray-500">🔒 Registrations are closed</p>
                       <p className="text-xs text-gray-400 mt-1">The host has paused sign-ups for this game.</p>
-                    </div>
-                  ) : game.gameType === "session" && game.blocks ? (
-                    <div className="flex flex-col gap-3">
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sign up for a block</p>
-                      {game.blocks.map((block, bi) => {
-                        const blockPlayers = game.blockRegistrations?.[bi] || [];
-                        const blockFull = blockPlayers.length >= block.maxPlayers;
-                        const userJoined = blockPlayers.some(p => p.userJoined);
-                        const isCoaching = block.label.toLowerCase().includes("coach");
-                        return (
-                          <div key={bi} className={`rounded-2xl p-4 border ${isCoaching ? "bg-purple-50 border-purple-100" : "bg-emerald-50 border-emerald-100"}`}>
-                            <div className="flex items-center justify-between mb-2">
-                              <p className={`text-sm font-bold ${isCoaching ? "text-purple-700" : "text-emerald-700"}`}>{block.label}</p>
-                              <span className="text-xs text-gray-400">{displayTime(block.startTime)} – {displayTime(block.endTime)}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-gray-500">{blockPlayers.length}/{block.maxPlayers} joined · {block.price > 0 ? `NT$${block.price}` : "Free"}</span>
-                              {userJoined ? (
-                                <span className="text-xs font-bold text-emerald-600 bg-white px-2.5 py-1 rounded-full border border-emerald-200">✓ Joined</span>
-                              ) : user ? (
-                                <button
-                                  disabled={blockFull}
-                                  onClick={() => { setSelectedBlockIndex(bi); setShowRegister(true); }}
-                                  className="text-xs font-bold px-3 py-1.5 rounded-full text-white disabled:opacity-40 transition-all active:scale-95"
-                                  style={{ background: blockFull ? "#9ca3af" : isCoaching ? "#7c3aed" : "#059669" }}>
-                                  {blockFull ? "Full" : "Join"}
-                                </button>
-                              ) : (
-                                <button onClick={signInWithLINE}
-                                  className="text-xs font-bold px-3 py-1.5 rounded-full text-white"
-                                  style={{ background: "#06C755" }}>
-                                  Sign in
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
                     </div>
                   ) : !isFull ? (
                   user ? (
@@ -974,6 +966,7 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                   )
                 )}
                 </div>
+                )}
               </div>
             </div>
           </div>
