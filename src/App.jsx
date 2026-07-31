@@ -219,6 +219,7 @@ async function fetchGames(token) {
     blocks: g.blocks || null,
     createdByName: g.created_by_name || g.created_by || null,
     createdByEmail: g.created_by || null,
+    createdByAvatar: g.created_by_avatar || null,
     isUserRegistered: registrations.filter(r => r.game_id === g.id && !r.is_waitlist).some(r => !!myTokens[r.id] && myTokens[r.id] === r.guest_token),
     blockRegistrations: g.blocks ? g.blocks.map((_, bi) =>
       registrations.filter(r => r.game_id === g.id && r.block_index === bi && !r.is_waitlist)
@@ -806,18 +807,22 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                   </div>
                 )}
 
-                {/* Spots */}
-                <div className="mb-4"><SpotsBar filled={game.players.length} max={game.maxPlayers} /></div>
-                <div className="flex flex-wrap items-center gap-2 mb-5">
-                  <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${statusColor}`}>
-                    {isFull ? "Game is Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} remaining`}
-                  </span>
-                  {game.waitlist.length > 0 && (
-                    <span className="text-xs font-semibold px-3 py-1.5 rounded-full border bg-amber-50 text-amber-600 border-amber-100">
-                      {game.waitlist.length} on waitlist
-                    </span>
-                  )}
-                </div>
+                {/* Spots — only for non-session games */}
+                {game.gameType !== "session" && (
+                  <>
+                    <div className="mb-4"><SpotsBar filled={game.players.length} max={game.maxPlayers} /></div>
+                    <div className="flex flex-wrap items-center gap-2 mb-5">
+                      <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${statusColor}`}>
+                        {isFull ? "Game is Full" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} remaining`}
+                      </span>
+                      {game.waitlist.length > 0 && (
+                        <span className="text-xs font-semibold px-3 py-1.5 rounded-full border bg-amber-50 text-amber-600 border-amber-100">
+                          {game.waitlist.length} on waitlist
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 {/* Players */}
                 <div className="mb-4">
@@ -1100,8 +1105,15 @@ function GameCard({ game, onClick }) {
                       </div>
                     </div>
                     {/* Players inside block */}
-                    {blockPlayers.length > 0 && (
+                    {(blockPlayers.length > 0 || (isCoaching && game.createdByName)) && (
                       <div className="bg-white px-3 py-2 flex flex-col gap-1">
+                        {isCoaching && !trainerPlayer && game.createdByName && (
+                          <div className="flex items-center gap-2">
+                            <Avatar url={game.createdByAvatar || null} name={game.createdByName} size={5} />
+                            <span className="text-xs text-gray-600">{game.createdByName}</span>
+                            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">Trainer</span>
+                          </div>
+                        )}
                         {trainerPlayer && (
                           <div className="flex items-center gap-2">
                             <Avatar url={trainerPlayer.avatarUrl} name={trainerPlayer.name} size={5} />
