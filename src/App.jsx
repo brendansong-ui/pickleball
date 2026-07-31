@@ -1174,7 +1174,7 @@ function GameFormModal({ game, onClose, onSave }) {
     const endTime = form.endTimeHr && form.endTimeMin ? `${form.endTimeHr}:${form.endTimeMin}` : "";
     setLoading(true);
     try {
-      await onSave({ ...form, time, endTime, maxPlayers: Number(form.maxPlayers), courts: Number(form.courts), price: Number(form.price), gameType: form.gameType, blocks: form.gameType === "session" ? blocks : null });
+      await onSave({ ...form, time, endTime, maxPlayers: Number(form.maxPlayers), courts: Number(form.courts), price: Number(form.price), gameType: blocks.length > 0 ? "session" : "game", blocks: blocks.length > 0 ? blocks : null });
       onClose();
     } catch (e) { setError("Something went wrong: " + e.message); }
     setLoading(false);
@@ -1193,17 +1193,68 @@ function GameFormModal({ game, onClose, onSave }) {
             {/* Game type toggle */}
             {!isEdit && (
               <div>
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Game Type</label>
-                <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
-                  <button onClick={() => update("gameType", "game")}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${form.gameType === "game" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400"}`}>
-                    Regular Game
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Session Blocks <span className="normal-case font-normal text-gray-300">(optional)</span></label>
+                <p className="text-xs text-gray-400 mb-2">Add blocks if your session has different parts e.g. coaching then open play. Players can sign up for one or more.</p>
+                {blocks.length === 0 ? (
+                  <button onClick={() => setBlocks([{ label: "Block 1", startTime: "", endTime: "", maxPlayers: 8, price: 0 }])}
+                    className="w-full py-2.5 rounded-xl text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 active:scale-95 transition-all">
+                    + Add Session Blocks
                   </button>
-                  <button onClick={() => update("gameType", "session")}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${form.gameType === "session" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400"}`}>
-                    Coaching Session
-                  </button>
-                </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {blocks.map((block, bi) => (
+                      <div key={bi} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-center justify-between mb-3">
+                          <input type="text" value={block.label}
+                            onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], label: e.target.value }; setBlocks(b); }}
+                            className="text-sm font-bold text-gray-800 bg-transparent outline-none border-b border-gray-200 flex-1 mr-3 pb-1 focus:border-blue-300" />
+                          <button onClick={() => setBlocks(blocks.filter((_, i) => i !== bi))}
+                            className="text-red-400 text-xs font-semibold flex-shrink-0">Remove</button>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <label className="text-xs text-gray-400 mb-1 block">Start time</label>
+                              <input type="time" value={block.startTime}
+                                onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], startTime: e.target.value }; setBlocks(b); }}
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-xs text-gray-400 mb-1 block">End time</label>
+                              <input type="time" value={block.endTime}
+                                onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], endTime: e.target.value }; setBlocks(b); }}
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <label className="text-xs text-gray-400 mb-1 block">Max players</label>
+                              <input type="number" min="1" value={block.maxPlayers}
+                                onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], maxPlayers: Number(e.target.value) }; setBlocks(b); }}
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-xs text-gray-400 mb-1 block">Price (NT$)</label>
+                              <input type="number" min="0" value={block.price}
+                                onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], price: Number(e.target.value) }; setBlocks(b); }}
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex gap-2">
+                      <button onClick={() => setBlocks([...blocks, { label: `Block ${blocks.length + 1}`, startTime: "", endTime: "", maxPlayers: 8, price: 0 }])}
+                        className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 active:scale-95 transition-all">
+                        + Add Block
+                      </button>
+                      <button onClick={() => setBlocks([])}
+                        className="py-2.5 px-4 rounded-xl text-xs font-semibold text-red-400 bg-red-50 border border-red-100 active:scale-95 transition-all">
+                        Remove All
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1358,62 +1409,6 @@ function GameFormModal({ game, onClose, onSave }) {
                 className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 resize-none" />
               <p className="text-xs text-gray-300 mt-1">Players will see this when they view your game.</p>
             </div>
-
-            {/* Session blocks builder */}
-            {form.gameType === "session" && (
-              <div>
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 block">Session Blocks</label>
-                <div className="flex flex-col gap-2">
-                  {blocks.map((block, bi) => (
-                    <div key={bi} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                      <div className="flex items-center justify-between mb-3">
-                        <input type="text" value={block.label}
-                          onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], label: e.target.value }; setBlocks(b); }}
-                          className="text-sm font-bold text-gray-800 bg-transparent outline-none border-b border-gray-200 flex-1 mr-3 pb-1 focus:border-blue-300" />
-                        {blocks.length > 1 && (
-                          <button onClick={() => setBlocks(blocks.filter((_, i) => i !== bi))}
-                            className="text-red-400 text-xs font-semibold flex-shrink-0">Remove</button>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <label className="text-xs text-gray-400 mb-1 block">Start time</label>
-                            <input type="time" value={block.startTime}
-                              onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], startTime: e.target.value }; setBlocks(b); }}
-                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
-                          </div>
-                          <div className="flex-1">
-                            <label className="text-xs text-gray-400 mb-1 block">End time</label>
-                            <input type="time" value={block.endTime}
-                              onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], endTime: e.target.value }; setBlocks(b); }}
-                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <label className="text-xs text-gray-400 mb-1 block">Max players</label>
-                            <input type="number" min="1" value={block.maxPlayers}
-                              onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], maxPlayers: Number(e.target.value) }; setBlocks(b); }}
-                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
-                          </div>
-                          <div className="flex-1">
-                            <label className="text-xs text-gray-400 mb-1 block">Price (NT$)</label>
-                            <input type="number" min="0" value={block.price}
-                              onChange={(e) => { const b = [...blocks]; b[bi] = { ...b[bi], price: Number(e.target.value) }; setBlocks(b); }}
-                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <button onClick={() => setBlocks([...blocks, { label: "New Block", startTime: "", endTime: "", maxPlayers: 8, price: 0 }])}
-                    className="w-full py-2.5 rounded-xl text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 active:scale-95 transition-all">
-                    + Add Block
-                  </button>
-                </div>
-              </div>
-            )}
 
           </div>
 
