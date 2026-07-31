@@ -1163,6 +1163,7 @@ function GameFormModal({ game, onClose, onSave }) {
     if (!form.date) { setError("Please select a date."); return; }
     if (form.date < today) { setError("Date cannot be in the past."); return; }
     if (!form.timeHr || !form.timeMin) { setError("Please select a start time."); return; }
+    if (!form.endTimeHr || !form.endTimeMin) { setError("Please select an end time."); return; }
     if (!form.location.trim()) { setError("Please enter a location."); return; }
     if (blocks.length === 0 && (form.price === "" || form.price === null || form.price === undefined)) {
       setError("Please enter a price (enter 0 if free)."); return;
@@ -1201,7 +1202,7 @@ function GameFormModal({ game, onClose, onSave }) {
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Date</label>
               <input type="date" value={form.date} min={today}
                 onChange={(e) => update("date", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
             </div>
 
             {/* Session Blocks toggle — right after date */}
@@ -1310,13 +1311,11 @@ function GameFormModal({ game, onClose, onSave }) {
                 </select>
               </div>
               <div className="flex-1">
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
-                  End Time <span className="normal-case font-normal text-gray-300">(optional)</span>
-                </label>
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">End Time</label>
                 <select value={form.endTimeHr && form.endTimeMin ? `${form.endTimeHr}:${form.endTimeMin}` : ""}
                   onChange={(e) => { if (!e.target.value) { update("endTimeHr", ""); update("endTimeMin", ""); return; } const [h, m] = e.target.value.split(":"); update("endTimeHr", h); update("endTimeMin", m); }}
                   className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 bg-white">
-                  <option value="">None</option>
+                  <option value="">Select</option>
                   {Array.from({length: 36}, (_, i) => {
                     const totalMins = 6 * 60 + i * 30;
                     const h = String(Math.floor(totalMins / 60)).padStart(2, "0");
