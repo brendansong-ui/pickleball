@@ -826,20 +826,32 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                       <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Registered Players</h3>
                       {game.blocks.map((block, bi) => {
                         const blockPlayers = game.blockRegistrations?.[bi] || [];
+                        const isCoaching = block.label.toLowerCase().includes("coach");
+                        const trainerPlayer = blockPlayers.find(p => p.isHost);
+                        const nonTrainerPlayers = blockPlayers.filter(p => !p.isHost);
                         return (
-                          <div key={bi} className="mb-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-xs font-bold text-gray-600">{block.label}</span>
-                              <span className="text-xs text-gray-400">({blockPlayers.length}/{block.maxPlayers})</span>
+                          <div key={bi} className={`mb-4 rounded-2xl border overflow-hidden ${isCoaching ? "border-purple-100" : "border-emerald-100"}`}>
+                            <div className={`px-4 py-2.5 flex items-center justify-between ${isCoaching ? "bg-purple-50" : "bg-emerald-50"}`}>
+                              <span className={`text-xs font-bold ${isCoaching ? "text-purple-700" : "text-emerald-700"}`}>{block.label}</span>
+                              <span className="text-xs text-gray-400">{nonTrainerPlayers.length}/{block.maxPlayers} players</span>
                             </div>
-                            {blockPlayers.length === 0
-                              ? <p className="text-xs text-gray-300 pl-2">No one signed up yet</p>
-                              : <div className="flex flex-col gap-2">
-                                  {blockPlayers.map((p, i) => (
-                                    <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
-                                  ))}
+                            <div className="p-3 flex flex-col gap-2 bg-white">
+                              {trainerPlayer && (
+                                <div className="flex items-center gap-2.5 bg-purple-50 rounded-xl px-3 py-2">
+                                  <Avatar url={trainerPlayer.avatarUrl} name={trainerPlayer.name} size={7} />
+                                  <div className="flex-1">
+                                    <span className="text-sm font-medium text-gray-700">{trainerPlayer.name}</span>
+                                  </div>
+                                  <span className="text-xs font-bold text-purple-600 bg-white px-2 py-0.5 rounded-full border border-purple-200">Trainer</span>
                                 </div>
-                            }
+                              )}
+                              {nonTrainerPlayers.length === 0 && !trainerPlayer
+                                ? <p className="text-xs text-gray-300 text-center py-2">No one signed up yet</p>
+                                : nonTrainerPlayers.map((p, i) => (
+                                    <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
+                                  ))
+                              }
+                            </div>
                           </div>
                         );
                       })}
@@ -1068,24 +1080,48 @@ function GameCard({ game, onClick }) {
             <div className="flex flex-col gap-2 mb-3">
               {game.blocks.map((block, bi) => {
                 const blockPlayers = game.blockRegistrations?.[bi] || [];
-                const blockFull = blockPlayers.length >= block.maxPlayers;
-                const userJoined = blockPlayers.some(p => p.userJoined);
                 const isCoaching = block.label.toLowerCase().includes("coach");
+                const nonTrainerPlayers = blockPlayers.filter(p => !p.isHost);
+                const trainerPlayer = blockPlayers.find(p => p.isHost);
+                const blockFull = nonTrainerPlayers.length >= block.maxPlayers;
+                const userJoined = blockPlayers.some(p => p.userJoined);
                 return (
-                  <div key={bi} className={`rounded-xl px-3 py-2.5 border ${isCoaching ? "bg-purple-50 border-purple-100" : "bg-emerald-50 border-emerald-100"}`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`text-xs font-bold ${isCoaching ? "text-purple-700" : "text-emerald-700"}`}>{block.label}</span>
-                      <span className="text-xs text-gray-400">{displayTime(block.startTime)} – {displayTime(block.endTime)}</span>
+                  <div key={bi} className={`rounded-xl border overflow-hidden ${isCoaching ? "border-purple-100" : "border-emerald-100"}`}>
+                    {/* Block header */}
+                    <div className={`px-3 py-2 flex items-center justify-between ${isCoaching ? "bg-purple-50" : "bg-emerald-50"}`}>
+                      <div>
+                        <span className={`text-xs font-bold ${isCoaching ? "text-purple-700" : "text-emerald-700"}`}>{block.label}</span>
+                        <span className="text-xs text-gray-400 ml-2">{displayTime(block.startTime)} – {displayTime(block.endTime)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">{nonTrainerPlayers.length}/{block.maxPlayers}</span>
+                        {userJoined
+                          ? <span className="text-xs font-bold text-emerald-600">✓ Joined</span>
+                          : blockFull
+                            ? <span className="text-xs font-semibold text-red-400">Full</span>
+                            : <span className="text-xs text-gray-400">{block.price > 0 ? `NT$${block.price}` : "Free"}</span>
+                        }
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">{blockPlayers.length}/{block.maxPlayers} joined · {block.price > 0 ? `NT$${block.price}` : "Free"}</span>
-                      {userJoined
-                        ? <span className="text-xs font-bold text-emerald-600">✓ Joined</span>
-                        : blockFull
-                          ? <span className="text-xs font-semibold text-red-400">Full</span>
-                          : <span className="text-xs font-bold text-blue-600">Tap to join</span>
-                      }
-                    </div>
+                    {/* Players inside block */}
+                    {blockPlayers.length > 0 && (
+                      <div className="bg-white px-3 py-2 flex flex-col gap-1">
+                        {trainerPlayer && (
+                          <div className="flex items-center gap-2">
+                            <Avatar url={trainerPlayer.avatarUrl} name={trainerPlayer.name} size={5} />
+                            <span className="text-xs text-gray-600">{trainerPlayer.name}</span>
+                            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">Trainer</span>
+                          </div>
+                        )}
+                        {nonTrainerPlayers.map((p, i) => (
+                          <div key={p.id} className="flex items-center gap-2">
+                            <Avatar url={p.avatarUrl} name={p.name} size={5} />
+                            <span className="text-xs text-gray-600">{p.name}</span>
+                            {p.duprRating && <span className="text-xs font-bold text-blue-500">DUPR {Number(p.duprRating).toFixed(2)}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
