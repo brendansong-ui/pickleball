@@ -1202,7 +1202,8 @@ function GameFormModal({ game, onClose, onSave }) {
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Date</label>
               <input type="date" value={form.date} min={today}
                 onChange={(e) => update("date", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+                style={{ height: "46px" }}
+                className="w-full border border-gray-200 rounded-xl px-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
             </div>
 
             {/* Session Blocks toggle — right after date */}
