@@ -1167,14 +1167,17 @@ function GameFormModal({ game, onClose, onSave }) {
     if (form.date < today) { setError("Date cannot be in the past."); return; }
     if (!form.timeHr || !form.timeMin) { setError("Please select a start time."); return; }
     if (!form.location.trim()) { setError("Please enter a location."); return; }
-    if (form.price === "" || form.price === null || form.price === undefined) {
+    if (blocks.length === 0 && (form.price === "" || form.price === null || form.price === undefined)) {
       setError("Please enter a price (enter 0 if free)."); return;
     }
     const time = `${form.timeHr}:${form.timeMin}`;
     const endTime = form.endTimeHr && form.endTimeMin ? `${form.endTimeHr}:${form.endTimeMin}` : "";
     setLoading(true);
     try {
-      await onSave({ ...form, time, endTime, maxPlayers: Number(form.maxPlayers), courts: Number(form.courts), price: Number(form.price), gameType: blocks.length > 0 ? "session" : "game", blocks: blocks.length > 0 ? blocks : null });
+      const totalMaxPlayers = blocks.length > 0
+        ? blocks.reduce((sum, b) => sum + (Number(b.maxPlayers) || 0), 0) || Number(form.maxPlayers)
+        : Number(form.maxPlayers);
+      await onSave({ ...form, time, endTime, maxPlayers: totalMaxPlayers, courts: Number(form.courts), price: blocks.length > 0 ? 0 : Number(form.price), gameType: blocks.length > 0 ? "session" : "game", blocks: blocks.length > 0 ? blocks : null });
       onClose();
     } catch (e) { setError("Something went wrong: " + e.message); }
     setLoading(false);
@@ -1304,33 +1307,46 @@ function GameFormModal({ game, onClose, onSave }) {
               </div>
             )}
 
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Max Players</label>
-                <input type="number" min={2} max={64} value={form.maxPlayers}
-                  onChange={(e) => update("maxPlayers", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+            {blocks.length === 0 && (
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Max Players</label>
+                  <input type="number" min={2} max={64} value={form.maxPlayers}
+                    onChange={(e) => update("maxPlayers", e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Number of Courts</label>
+                  <input type="number" min={1} max={20} value={form.courts}
+                    onChange={(e) => update("courts", e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+                </div>
               </div>
+            )}
+
+            {blocks.length > 0 && (
               <div className="flex-1">
                 <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Number of Courts</label>
                 <input type="number" min={1} max={20} value={form.courts}
                   onChange={(e) => update("courts", e.target.value)}
                   className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
               </div>
-            </div>
+            )}
 
-            <div>
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
-                Price / Player (NTD) <span className="text-red-400">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">NT$</span>
-                <input type="number" min={0} step={10} placeholder="0" value={form.price}
-                  onChange={(e) => update("price", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl pl-11 pr-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+            {blocks.length === 0 && (
+              <div>
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                  Price / Player (NTD) <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">NT$</span>
+                  <input type="number" min={0} step={10} placeholder="0" value={form.price}
+                    onChange={(e) => update("price", e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl pl-11 pr-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50" />
+                </div>
+                <p className="text-xs text-gray-300 mt-1">Enter 0 if the game is free.</p>
               </div>
-              <p className="text-xs text-gray-300 mt-1">Enter 0 if the game is free.</p>
-            </div>
+            )}
 
             <div>
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
