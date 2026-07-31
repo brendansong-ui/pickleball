@@ -800,7 +800,9 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                 {game.notes && (
                   <div className="mb-4 bg-blue-50 rounded-xl px-4 py-3">
                     <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">Host Notes</p>
-                    <p className="text-sm text-blue-600 leading-relaxed">{game.notes}</p>
+                    {game.notes.split("\n").map((line, i) => (
+                      <p key={i} className="text-sm text-blue-600 leading-relaxed">{line || "\u00A0"}</p>
+                    ))}
                   </div>
                 )}
 
@@ -819,17 +821,44 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
 
                 {/* Players */}
                 <div className="mb-4">
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
-                    Registered Players ({game.players.length})
-                  </h3>
-                  {game.players.length === 0
-                    ? <p className="text-sm text-gray-300 text-center py-4">No one registered yet. Be the first!</p>
-                    : <div className="flex flex-col gap-2">
-                        {game.players.map((p, i) => (
-                          <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
-                        ))}
-                      </div>
-                  }
+                  {game.gameType === "session" && game.blocks ? (
+                    <>
+                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Registered Players</h3>
+                      {game.blocks.map((block, bi) => {
+                        const blockPlayers = game.blockRegistrations?.[bi] || [];
+                        return (
+                          <div key={bi} className="mb-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs font-bold text-gray-600">{block.label}</span>
+                              <span className="text-xs text-gray-400">({blockPlayers.length}/{block.maxPlayers})</span>
+                            </div>
+                            {blockPlayers.length === 0
+                              ? <p className="text-xs text-gray-300 pl-2">No one signed up yet</p>
+                              : <div className="flex flex-col gap-2">
+                                  {blockPlayers.map((p, i) => (
+                                    <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
+                                  ))}
+                                </div>
+                            }
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
+                        Registered Players ({game.players.length})
+                      </h3>
+                      {game.players.length === 0
+                        ? <p className="text-sm text-gray-300 text-center py-4">No one registered yet. Be the first!</p>
+                        : <div className="flex flex-col gap-2">
+                            {game.players.map((p, i) => (
+                              <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
+                            ))}
+                          </div>
+                      }
+                    </>
+                  )}
                 </div>
 
                 {/* Waitlist */}
