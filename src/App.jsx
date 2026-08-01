@@ -260,7 +260,6 @@ async function fetchGames(token) {
 }
 
 async function createGame(data, token) {
-  console.log("createGame blocks:", JSON.stringify(data.blocks));
   const payload = {
     title: data.title, date: data.date, time: data.time,
     end_time: data.endTime || null, location: data.location,
@@ -270,7 +269,6 @@ async function createGame(data, token) {
     game_type: data.gameType || "game",
     blocks: data.blocks || null,
   };
-  console.log("Full payload:", JSON.stringify(payload));
   const result = await sbFetch("games", {
     method: "POST", prefer: "return=representation",
     body: JSON.stringify(payload),
@@ -1253,7 +1251,6 @@ function GameFormModal({ game, onClose, onSave }) {
       const totalMaxPlayers = blocks.length > 0
         ? blocks.reduce((sum, b) => sum + (Number(b.maxPlayers) || 0), 0) || Number(form.maxPlayers)
         : Number(form.maxPlayers);
-      console.log("Saving blocks:", JSON.stringify(blocks));
       await onSave({ ...form, time, endTime, maxPlayers: totalMaxPlayers, courts: Number(form.courts), price: blocks.length > 0 ? 0 : Number(form.price), gameType: blocks.length > 0 ? "session" : "game", blocks: blocks.length > 0 ? blocks : null });
       onClose();
     } catch (e) { setError("Something went wrong: " + e.message); }
