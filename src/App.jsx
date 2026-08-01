@@ -1104,9 +1104,6 @@ function GameCard({ game, onClick }) {
             {/* Right side: status + ellipsis */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
               <div className="flex items-center gap-1.5">
-                {game.gameType === "session" && (
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">Session</span>
-                )}
                 {game.gameType !== "session" && game.isUserRegistered && (
                   <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">✓ Joined</span>
                 )}
