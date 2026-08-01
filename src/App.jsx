@@ -837,50 +837,94 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                         const nonTrainerPlayers = blockPlayers.filter(p => !p.isHost);
                         const blockFull = nonTrainerPlayers.length >= block.maxPlayers;
                         const userJoined = nonTrainerPlayers.some(p => p.userJoined);
+
+                        // Calculate duration
+                        const [sh, sm] = block.startTime ? block.startTime.split(":").map(Number) : [0, 0];
+                        const [eh, em] = block.endTime ? block.endTime.split(":").map(Number) : [0, 0];
+                        const durationMins = (eh * 60 + em) - (sh * 60 + sm);
+                        const durationLabel = durationMins >= 60
+                          ? durationMins % 60 === 0 ? `${durationMins / 60}hr` : `${Math.floor(durationMins / 60)}hr ${durationMins % 60}min`
+                          : `${durationMins}min`;
+
                         return (
-                          <div key={bi} className={`rounded-2xl border overflow-hidden ${isCoaching ? "border-purple-100" : "border-emerald-100"}`}>
-                            {/* Block header */}
-                            <div className={`px-4 py-3 ${isCoaching ? "bg-purple-50" : "bg-emerald-50"}`}>
-                              <div className="flex items-center justify-between mb-0.5">
-                                <span className={`text-sm font-bold ${isCoaching ? "text-purple-700" : "text-emerald-700"}`}>{block.label}</span>
-                                <span className="text-xs text-gray-400">{displayTime(block.startTime)} – {displayTime(block.endTime)}</span>
+                          <div key={bi} className="rounded-2xl border overflow-hidden"
+                            style={{ borderColor: isCoaching ? "#e9d5ff" : "#bbf7d0" }}>
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-4 py-3"
+                              style={{ background: isCoaching ? "#faf5ff" : "#f0fdf4", borderBottom: `0.5px solid ${isCoaching ? "#e9d5ff" : "#bbf7d0"}` }}>
+                              <div className="flex items-center gap-2">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={isCoaching ? "#7c3aed" : "#059669"} strokeWidth="2">
+                                  {isCoaching
+                                    ? <><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></>
+                                    : <><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></>
+                                  }
+                                </svg>
+                                <span className="text-sm font-bold" style={{ color: isCoaching ? "#6d28d9" : "#047857" }}>{block.label}</span>
                               </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-500">{nonTrainerPlayers.length}/{block.maxPlayers} players · {block.price > 0 ? `NT$${block.price}` : "Free"}</span>
-                                {!game.registrationOpen ? null : userJoined ? (
-                                  <span className="text-xs font-bold text-emerald-600">✓ Joined</span>
+                              <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                                style={{ background: "white", color: isCoaching ? "#6d28d9" : "#047857", border: `0.5px solid ${isCoaching ? "#e9d5ff" : "#bbf7d0"}` }}>
+                                {block.price > 0 ? `NT$${block.price}` : "Free"}
+                              </span>
+                            </div>
+
+                            {/* Time row */}
+                            <div className="px-4 py-3 bg-white flex items-center justify-between border-b border-gray-50">
+                              <div className="flex items-center gap-1.5">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                <span className="text-sm font-bold text-gray-800">{displayTime(block.startTime)}</span>
+                                <span className="text-xs text-gray-400">—</span>
+                                <span className="text-sm font-bold text-gray-800">{displayTime(block.endTime)}</span>
+                                <span className="text-xs text-gray-400">· {durationLabel}</span>
+                              </div>
+                              <span className="text-xs text-gray-500">{nonTrainerPlayers.length}/{block.maxPlayers} players</span>
+                            </div>
+
+                            {/* Players */}
+                            <div className="bg-white px-4 py-3 flex flex-col gap-2">
+                              {isCoaching && !trainerPlayer && game.createdByName && (
+                                <div className="flex items-center gap-2.5 rounded-xl px-3 py-2" style={{ background: "#faf5ff" }}>
+                                  <Avatar url={game.createdByAvatar || null} name={game.createdByName} size={7} />
+                                  <span className="text-sm font-medium text-gray-700 flex-1">{game.createdByName}</span>
+                                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: "#6d28d9", background: "white", border: "0.5px solid #e9d5ff" }}>Trainer</span>
+                                </div>
+                              )}
+                              {trainerPlayer && (
+                                <div className="flex items-center gap-2.5 rounded-xl px-3 py-2" style={{ background: "#faf5ff" }}>
+                                  <Avatar url={trainerPlayer.avatarUrl} name={trainerPlayer.name} size={7} />
+                                  <span className="text-sm font-medium text-gray-700 flex-1">{trainerPlayer.name}</span>
+                                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: "#6d28d9", background: "white", border: "0.5px solid #e9d5ff" }}>Trainer</span>
+                                </div>
+                              )}
+                              {nonTrainerPlayers.length === 0 && !trainerPlayer && !game.createdByName && (
+                                <p className="text-xs text-gray-300 text-center py-1">No one signed up yet</p>
+                              )}
+                              {nonTrainerPlayers.map((p, i) => (
+                                <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
+                              ))}
+
+                              {/* Join button */}
+                              {game.registrationOpen && (
+                                userJoined ? (
+                                  <div className="mt-1 py-2 rounded-xl text-center text-xs font-bold" style={{ color: "#047857", background: "#f0fdf4" }}>✓ You're in</div>
                                 ) : user ? (
                                   <button
                                     disabled={blockFull}
                                     onClick={() => { setSelectedBlockIndex(bi); setShowRegister(true); }}
-                                    className="text-xs font-bold px-3 py-1.5 rounded-full text-white disabled:opacity-40 active:scale-95 transition-all"
+                                    className="mt-1 w-full py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-40 active:scale-95 transition-all"
                                     style={{ background: blockFull ? "#9ca3af" : isCoaching ? "#7c3aed" : "#059669" }}>
-                                    {blockFull ? "Full" : "Join"}
+                                    {blockFull ? "Full" : `Join ${block.label}`}
                                   </button>
                                 ) : (
                                   <button onClick={signInWithLINE}
-                                    className="text-xs font-bold px-3 py-1.5 rounded-full text-white"
+                                    className="mt-1 w-full py-2.5 rounded-xl text-sm font-bold text-white"
                                     style={{ background: "#06C755" }}>
-                                    Sign in
+                                    Sign in with LINE to join
                                   </button>
-                                )}
-                              </div>
+                                )
+                              )}
                             </div>
-                            {/* Players inside block */}
-                            {blockPlayers.length > 0 && (
-                              <div className="bg-white px-4 py-3 flex flex-col gap-2">
-                                {trainerPlayer && (
-                                  <div className="flex items-center gap-2.5 bg-purple-50 rounded-xl px-3 py-2">
-                                    <Avatar url={trainerPlayer.avatarUrl} name={trainerPlayer.name} size={7} />
-                                    <span className="text-sm font-medium text-gray-700 flex-1">{trainerPlayer.name}</span>
-                                    <span className="text-xs font-bold text-purple-600 bg-white px-2 py-0.5 rounded-full border border-purple-200">Trainer</span>
-                                  </div>
-                                )}
-                                {nonTrainerPlayers.map((p, i) => (
-                                  <PlayerRow key={p.id} player={p} game={game} index={i} isWaitlist={false} isAdmin={isAdmin} isGameHost={isOwner} onRemove={onRemovePlayer} onViewProfile={onViewProfile} />
-                                ))}
-                              </div>
-                            )}
                           </div>
                         );
                       })}
@@ -1069,7 +1113,7 @@ function GameCard({ game, onClick }) {
             <span>📅 {new Date(game.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
             <span>⏰ {displayTime(game.time)}{game.endTime ? `–${displayTime(game.endTime)}` : ""}</span>
             <span>🏟 {game.courts}</span>
-            {game.gameType === "session" && game.blocks ? (
+            {game.blocks && game.blocks.length > 0 ? (
               <span className="text-gray-400">Pricing varies by session</span>
             ) : game.price > 0 ? (
               <span className="text-emerald-600 font-semibold">NT${Number(game.price).toFixed(0)}</span>
@@ -1078,7 +1122,7 @@ function GameCard({ game, onClick }) {
             )}
           </div>
 
-          {game.gameType === "session" && game.blocks && (
+          {game.blocks && game.blocks.length > 0 && (
             <div className="flex flex-col gap-2 mb-3">
               {game.blocks.map((block, bi) => {
                 const blockPlayers = game.blockRegistrations?.[bi] || [];
@@ -1087,46 +1131,61 @@ function GameCard({ game, onClick }) {
                 const trainerPlayer = blockPlayers.find(p => p.isHost);
                 const blockFull = nonTrainerPlayers.length >= block.maxPlayers;
                 const userJoined = blockPlayers.some(p => p.userJoined);
+
+                const [sh, sm] = block.startTime ? block.startTime.split(":").map(Number) : [0, 0];
+                const [eh, em] = block.endTime ? block.endTime.split(":").map(Number) : [0, 0];
+                const durationMins = (eh * 60 + em) - (sh * 60 + sm);
+                const durationLabel = durationMins >= 60
+                  ? durationMins % 60 === 0 ? `${durationMins / 60}hr` : `${Math.floor(durationMins / 60)}hr ${durationMins % 60}min`
+                  : `${durationMins}min`;
+
                 return (
-                  <div key={bi} className={`rounded-xl border overflow-hidden ${isCoaching ? "border-purple-100" : "border-emerald-100"}`}>
-                    {/* Block header */}
-                    <div className={`px-3 py-2 flex items-center justify-between ${isCoaching ? "bg-purple-50" : "bg-emerald-50"}`}>
-                      <div>
-                        <span className={`text-xs font-bold ${isCoaching ? "text-purple-700" : "text-emerald-700"}`}>{block.label}</span>
-                        <span className="text-xs text-gray-400 ml-2">{displayTime(block.startTime)} – {displayTime(block.endTime)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">{nonTrainerPlayers.length}/{block.maxPlayers}</span>
-                        {userJoined
-                          ? <span className="text-xs font-bold text-emerald-600">✓ Joined</span>
-                          : blockFull
-                            ? <span className="text-xs font-semibold text-red-400">Full</span>
-                            : <span className="text-xs text-gray-400">{block.price > 0 ? `NT$${block.price}` : "Free"}</span>
-                        }
-                      </div>
+                  <div key={bi} className="rounded-xl border overflow-hidden"
+                    style={{ borderColor: isCoaching ? "#e9d5ff" : "#bbf7d0" }}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-3 py-2"
+                      style={{ background: isCoaching ? "#faf5ff" : "#f0fdf4", borderBottom: `0.5px solid ${isCoaching ? "#e9d5ff" : "#bbf7d0"}` }}>
+                      <span className="text-xs font-bold" style={{ color: isCoaching ? "#6d28d9" : "#047857" }}>{block.label}</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: "white", color: isCoaching ? "#6d28d9" : "#047857", border: `0.5px solid ${isCoaching ? "#e9d5ff" : "#bbf7d0"}` }}>
+                        {block.price > 0 ? `NT$${block.price}` : "Free"}
+                      </span>
                     </div>
-                    {/* Players inside block */}
+                    {/* Time row */}
+                    <div className="bg-white px-3 py-2 flex items-center justify-between border-b border-gray-50">
+                      <div className="flex items-center gap-1.5">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span className="text-xs font-bold text-gray-800">{displayTime(block.startTime)}</span>
+                        <span className="text-xs text-gray-400">—</span>
+                        <span className="text-xs font-bold text-gray-800">{displayTime(block.endTime)}</span>
+                        <span className="text-xs text-gray-400">· {durationLabel}</span>
+                      </div>
+                      <span className="text-xs text-gray-500">{nonTrainerPlayers.length}/{block.maxPlayers}</span>
+                    </div>
+                    {/* Players */}
                     {(blockPlayers.length > 0 || (isCoaching && game.createdByName)) && (
                       <div className="bg-white px-3 py-2 flex flex-col gap-1">
                         {isCoaching && !trainerPlayer && game.createdByName && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2" style={{ background: "#faf5ff", borderRadius: 8, padding: "4px 8px" }}>
                             <Avatar url={game.createdByAvatar || null} name={game.createdByName} size={5} />
-                            <span className="text-xs text-gray-600">{game.createdByName}</span>
-                            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">Trainer</span>
+                            <span className="text-xs text-gray-700 flex-1">{game.createdByName}</span>
+                            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ color: "#6d28d9", background: "white", border: "0.5px solid #e9d5ff" }}>Trainer</span>
                           </div>
                         )}
                         {trainerPlayer && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2" style={{ background: "#faf5ff", borderRadius: 8, padding: "4px 8px" }}>
                             <Avatar url={trainerPlayer.avatarUrl} name={trainerPlayer.name} size={5} />
-                            <span className="text-xs text-gray-600">{trainerPlayer.name}</span>
-                            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">Trainer</span>
+                            <span className="text-xs text-gray-700 flex-1">{trainerPlayer.name}</span>
+                            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ color: "#6d28d9", background: "white", border: "0.5px solid #e9d5ff" }}>Trainer</span>
                           </div>
                         )}
                         {nonTrainerPlayers.map((p, i) => (
-                          <div key={p.id} className="flex items-center gap-2">
+                          <div key={p.id} className="flex items-center gap-2 py-0.5">
                             <Avatar url={p.avatarUrl} name={p.name} size={5} />
                             <span className="text-xs text-gray-600">{p.name}</span>
-                            {p.duprRating && <span className="text-xs font-bold text-blue-500">DUPR {Number(p.duprRating).toFixed(2)}</span>}
+                            {p.duprRating && <span className="text-xs font-bold text-blue-500 ml-auto">DUPR {Number(p.duprRating).toFixed(2)}</span>}
                           </div>
                         ))}
                       </div>
@@ -1137,7 +1196,7 @@ function GameCard({ game, onClick }) {
             </div>
           )}
 
-          {game.gameType !== "session" && (
+          {(!game.blocks || game.blocks.length === 0) && (
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                 {game.players.length} / {game.maxPlayers} joined
