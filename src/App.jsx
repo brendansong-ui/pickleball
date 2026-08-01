@@ -261,17 +261,19 @@ async function fetchGames(token) {
 
 async function createGame(data, token) {
   console.log("createGame blocks:", JSON.stringify(data.blocks));
+  const payload = {
+    title: data.title, date: data.date, time: data.time,
+    end_time: data.endTime || null, location: data.location,
+    location_url: data.locationUrl || null, max_players: data.maxPlayers,
+    price: data.price, courts: data.courts || 1, notes: data.notes || null,
+    registration_open: true,
+    game_type: data.gameType || "game",
+    blocks: data.blocks || null,
+  };
+  console.log("Full payload:", JSON.stringify(payload));
   const result = await sbFetch("games", {
     method: "POST", prefer: "return=representation",
-    body: JSON.stringify({
-      title: data.title, date: data.date, time: data.time,
-      end_time: data.endTime || null, location: data.location,
-      location_url: data.locationUrl || null, max_players: data.maxPlayers,
-      price: data.price, courts: data.courts || 1, notes: data.notes || null,
-      registration_open: true,
-      game_type: data.gameType || "game",
-      blocks: data.blocks || null,
-    }),
+    body: JSON.stringify(payload),
   }, token);
   if (result && result[0] && data.createdBy) {
     const guestToken = generateToken();
