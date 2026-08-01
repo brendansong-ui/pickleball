@@ -274,17 +274,36 @@ async function createGame(data, token) {
     body: JSON.stringify(payload),
   }, token);
   if (result && result[0] && data.createdBy) {
-    const guestToken = generateToken();
-    const reg = await sbFetch("registrations", {
-      method: "POST", prefer: "return=representation",
-      body: JSON.stringify({
-        game_id: result[0].id, name: data.createdByName || data.createdBy,
-        dupr_rating: data.createdByDupr || null, is_waitlist: false, avatar_url: data.createdByAvatar || null,
-        user_id: data.createdByUserId || null,
-        guest_token: guestToken, is_host: true,
-      }),
-    });
-    if (reg && reg[0]) saveGuestToken(reg[0].id, guestToken);
+    if (data.blocks && data.blocks.length > 0) {
+      // Create one registration per block — Trainer for coaching, Host for others
+      for (let bi = 0; bi < data.blocks.length; bi++) {
+        const guestToken = generateToken();
+        const reg = await sbFetch("registrations", {
+          method: "POST", prefer: "return=representation",
+          body: JSON.stringify({
+            game_id: result[0].id, name: data.createdByName || data.createdBy,
+            dupr_rating: data.createdByDupr || null, is_waitlist: false,
+            avatar_url: data.createdByAvatar || null,
+            user_id: data.createdByUserId || null,
+            block_index: bi,
+            guest_token: guestToken, is_host: true,
+          }),
+        });
+        if (reg && reg[0]) saveGuestToken(reg[0].id, guestToken);
+      }
+    } else {
+      const guestToken = generateToken();
+      const reg = await sbFetch("registrations", {
+        method: "POST", prefer: "return=representation",
+        body: JSON.stringify({
+          game_id: result[0].id, name: data.createdByName || data.createdBy,
+          dupr_rating: data.createdByDupr || null, is_waitlist: false, avatar_url: data.createdByAvatar || null,
+          user_id: data.createdByUserId || null,
+          guest_token: guestToken, is_host: true,
+        }),
+      });
+      if (reg && reg[0]) saveGuestToken(reg[0].id, guestToken);
+    }
   }
   return result;
 }
@@ -833,8 +852,9 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                       {game.blocks.map((block, bi) => {
                         const blockPlayers = game.blockRegistrations?.[bi] || [];
                         const isCoaching = block.label.toLowerCase().includes("coach");
-                        const trainerPlayer = blockPlayers.find(p => p.isHost);
-                        const nonTrainerPlayers = blockPlayers.filter(p => !p.isHost);
+                        const trainerPlayer = isCoaching ? blockPlayers.find(p => p.isHost) : null;
+                        const hostAsPlayer = !isCoaching ? blockPlayers.find(p => p.isHost) : null;
+                        const nonTrainerPlayers = isCoaching ? blockPlayers.filter(p => !p.isHost) : blockPlayers;
                         const blockFull = nonTrainerPlayers.length >= block.maxPlayers;
                         const userJoined = nonTrainerPlayers.some(p => p.userJoined);
 
@@ -887,14 +907,14 @@ function GameDetailModal({ game, onRegister, onClose, onRemovePlayer, user, isAd
                                 <div className="flex items-center gap-2.5 rounded-xl px-3 py-2" style={{ background: "#faf5ff" }}>
                                   <Avatar url={game.createdByAvatar || null} name={game.createdByName} size={7} />
                                   <span className="text-sm font-medium text-gray-700 flex-1">{game.createdByName}</span>
-                                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: "#6d28d9", background: "white", border: "0.5px solid #e9d5ff" }}>Trainer</span>
+                                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: isCoaching ? "#6d28d9" : "#047857", background: "white", border: `0.5px solid ${isCoaching ? "#e9d5ff" : "#bbf7d0"}` }}>{isCoaching ? "Trainer" : "Host"}</span>
                                 </div>
                               )}
                               {trainerPlayer && (
                                 <div className="flex items-center gap-2.5 rounded-xl px-3 py-2" style={{ background: "#faf5ff" }}>
                                   <Avatar url={trainerPlayer.avatarUrl} name={trainerPlayer.name} size={7} />
                                   <span className="text-sm font-medium text-gray-700 flex-1">{trainerPlayer.name}</span>
-                                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: "#6d28d9", background: "white", border: "0.5px solid #e9d5ff" }}>Trainer</span>
+                                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: isCoaching ? "#6d28d9" : "#047857", background: "white", border: `0.5px solid ${isCoaching ? "#e9d5ff" : "#bbf7d0"}` }}>{isCoaching ? "Trainer" : "Host"}</span>
                                 </div>
                               )}
                               {nonTrainerPlayers.length === 0 && !trainerPlayer && !game.createdByName && (
@@ -1127,8 +1147,8 @@ function GameCard({ game, onClick }) {
               {game.blocks.map((block, bi) => {
                 const blockPlayers = game.blockRegistrations?.[bi] || [];
                 const isCoaching = block.label.toLowerCase().includes("coach");
-                const nonTrainerPlayers = blockPlayers.filter(p => !p.isHost);
-                const trainerPlayer = blockPlayers.find(p => p.isHost);
+                const trainerPlayer = isCoaching ? blockPlayers.find(p => p.isHost) : null;
+                const nonTrainerPlayers = isCoaching ? blockPlayers.filter(p => !p.isHost) : blockPlayers;
                 const blockFull = nonTrainerPlayers.length >= block.maxPlayers;
                 const userJoined = blockPlayers.some(p => p.userJoined);
 
@@ -1171,14 +1191,14 @@ function GameCard({ game, onClick }) {
                           <div className="flex items-center gap-2" style={{ background: "#faf5ff", borderRadius: 8, padding: "4px 8px" }}>
                             <Avatar url={game.createdByAvatar || null} name={game.createdByName} size={5} />
                             <span className="text-xs text-gray-700 flex-1">{game.createdByName}</span>
-                            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ color: "#6d28d9", background: "white", border: "0.5px solid #e9d5ff" }}>Trainer</span>
+                            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ color: isCoaching ? "#6d28d9" : "#047857", background: "white", border: `0.5px solid ${isCoaching ? "#e9d5ff" : "#bbf7d0"}` }}>{isCoaching ? "Trainer" : "Host"}</span>
                           </div>
                         )}
                         {trainerPlayer && (
                           <div className="flex items-center gap-2" style={{ background: "#faf5ff", borderRadius: 8, padding: "4px 8px" }}>
                             <Avatar url={trainerPlayer.avatarUrl} name={trainerPlayer.name} size={5} />
                             <span className="text-xs text-gray-700 flex-1">{trainerPlayer.name}</span>
-                            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ color: "#6d28d9", background: "white", border: "0.5px solid #e9d5ff" }}>Trainer</span>
+                            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ color: isCoaching ? "#6d28d9" : "#047857", background: "white", border: `0.5px solid ${isCoaching ? "#e9d5ff" : "#bbf7d0"}` }}>{isCoaching ? "Trainer" : "Host"}</span>
                           </div>
                         )}
                         {nonTrainerPlayers.map((p, i) => (
@@ -2476,11 +2496,18 @@ export default function App() {
                       <div className="flex items-center justify-between">
                         <div className="flex gap-3 text-xs text-blue-200">
                           <span>⏰ {displayTime(next.time)}{next.endTime ? `–${displayTime(next.endTime)}` : ""}</span>
-                          <span>{next.price > 0 ? `NT$${Number(next.price).toFixed(0)}` : "Free"}</span>
+                          {(!next.blocks || next.blocks.length === 0) && (
+                            <span>{next.price > 0 ? `NT$${Number(next.price).toFixed(0)}` : "Free"}</span>
+                          )}
+                          {next.blocks && next.blocks.length > 0 && (
+                            <span>Pricing varies by session</span>
+                          )}
                         </div>
-                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${isFull ? "bg-red-400/30 text-red-200" : "bg-white/20 text-white"}`}>
-                          {isFull ? "Full" : `${next.players.length}/${next.maxPlayers} joined`}
-                        </span>
+                        {(!next.blocks || next.blocks.length === 0) && (
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${isFull ? "bg-red-400/30 text-red-200" : "bg-white/20 text-white"}`}>
+                            {isFull ? "Full" : `${next.players.length}/${next.maxPlayers} joined`}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </button>
